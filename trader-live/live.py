@@ -130,7 +130,7 @@ def cmd_setup(a):
             fh.write(ENV_TEMPLATE)
         print("Created %s (private, mode 600)." % path)
     print("Next: open it in a text editor, paste your Upstox API key and secret, save. Do not paste them into "
-          "any chat. Then run: python3 live.py login")
+          "any chat. Then run: python3 trader-live/live.py login")
     gi = os.path.join(os.getcwd(), ".gitignore")
     try:
         text = open(gi).read() if os.path.exists(gi) else ""
