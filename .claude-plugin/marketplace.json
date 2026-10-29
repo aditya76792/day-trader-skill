@@ -1,18 +1,18 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "day-trader-skill",
-  "description": "The Day Trader skill pack for Claude: the Trader skill v2",
+  "name": "day-trader-skill-india",
+  "description": "The Day Trader skill pack for Claude, India edition (NSE/BSE)",
   "owner": {
-    "name": "Jake Schincariol",
-    "url": "https://opusjake.ai"
+    "name": "aditya76792",
+    "url": "https://github.com/aditya76792/day-trader-skill"
   },
   "plugins": [
     {
-      "name": "day-trader-skill",
-      "description": "Eleven Claude skills for day trading: a chart scanner, a news monitor, an entry timer, an exit planner, a time machine that replays 10,000 sessions, a risk manager, a budget manager, an order executor (paper by default, never without your yes), price alerts, an earnings analyst and a Pelosi tracker.",
+      "name": "day-trader-skill-india",
+      "description": "Thirteen Claude skills for NSE/BSE: market rules and charges, a chart scanner, a filings and news monitor, an entry timer, an exit planner, a time machine and backtester with Indian costs, an F&O desk, a risk manager, a budget manager, an order executor with a paper broker (never without your yes), price alerts, an earnings analyst and an insider and bulk-deal tracker.",
       "source": "./",
       "category": "productivity",
-      "homepage": "https://github.com/Jakeschincariol/day-trader-skill"
+      "homepage": "https://github.com/aditya76792/day-trader-skill"
     }
   ]
 }

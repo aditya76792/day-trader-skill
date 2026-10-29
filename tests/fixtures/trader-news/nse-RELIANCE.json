@@ -1,0 +1,22 @@
+[
+  {"symbol": "RELIANCE", "desc": "Outcome of Board Meeting", "dt": "28102026213350",
+   "attchmntFile": "https://nsearchives.nseindia.com/corporate/RELIANCE_28102026213350_BMOutcome.pdf",
+   "sm_name": "Reliance Industries Limited", "sm_isin": "INE002A01018", "an_dt": "28-Oct-2026 21:33:50",
+   "sort_date": "2026-10-28 21:33:50", "seq_id": "104512345", "smIndustry": "Refineries & Marketing",
+   "attchmntText": "Reliance Industries Limited has informed the Exchange about the Audited Financial Results for the quarter ended September 30, 2026 and recommended an interim dividend",
+   "hasXbrl": true},
+  {"symbol": "RELIANCE", "desc": "Change in Directorate", "dt": "28102026161000",
+   "attchmntFile": "https://nsearchives.nseindia.com/corporate/RELIANCE_28102026161000_Directorate.pdf",
+   "sm_name": "Reliance Industries Limited", "an_dt": "28-Oct-2026 16:10:00", "sort_date": "2026-10-28 16:10:00",
+   "seq_id": "104510000",
+   "attchmntText": "Reliance Industries Limited has informed the Exchange regarding the resignation of Mr. A. Kumar as Chief Financial Officer of the company with effect from October 31, 2026"},
+  {"symbol": "RELIANCE", "desc": "Credit Rating", "dt": "27102026180512",
+   "attchmntFile": "https://nsearchives.nseindia.com/corporate/RELIANCE_27102026180512_Rating.pdf",
+   "sm_name": "Reliance Industries Limited", "an_dt": "27-Oct-2026 18:05:12", "sort_date": "2026-10-27 18:05:12",
+   "seq_id": "104500001",
+   "attchmntText": "Reliance Industries Limited has informed the Exchange that CRISIL has reaffirmed the credit rating of the Company"},
+  {"symbol": "RELIANCE", "desc": "Trading Window-XBRL", "dt": "20102026100000",
+   "attchmntFile": "", "sm_name": "Reliance Industries Limited", "an_dt": "20-Oct-2026 10:00:00",
+   "sort_date": "2026-10-20 10:00:00", "seq_id": "104400000",
+   "attchmntText": "Reliance Industries Limited has informed the Exchange about closure of trading window"}
+]

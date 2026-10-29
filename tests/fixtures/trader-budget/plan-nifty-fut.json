@@ -1,0 +1,21 @@
+{
+ "created_by": "trader-fno",
+ "symbol": "NIFTY",
+ "exchange": "NSE",
+ "instrument": {
+  "type": "FUT",
+  "underlying": "NIFTY",
+  "expiry": "2026-11-23",
+  "lot_size": 65,
+  "tradingsymbol": "NIFTY26NOVFUT"
+ },
+ "product": "MIS",
+ "side": "buy",
+ "date": "2026-10-28",
+ "setup": "orb",
+ "entry": 25850.0,
+ "entry_time": "09:50",
+ "stop": 25800.0,
+ "target": 26000.0,
+ "flat_by": "15:10"
+}

@@ -1,14 +1,16 @@
 {
+  "_comment": [
+    "Example only. Where an Indian broker's MCP server goes in Claude Desktop (Settings > Developer > Edit Config).",
+    "This pack does not need any broker: with \"paper\": true it uses its own paper broker (paper.py).",
+    "Example server: Zerodha's official hosted Kite MCP at https://mcp.kite.trade/mcp (you log in to Kite in your browser; no keys go in this file or in the chat).",
+    "You can also add the same URL as a custom connector (Customize > Connectors) instead of this file.",
+    "After adding it, set every tool that places, modifies or cancels an order, or reads your account, to Needs approval. Never Always allow.",
+    "Upstox, Dhan and other brokers publish their own MCP servers or APIs; check their docs. Never paste API keys, passwords or TOTP codes into the chat."
+  ],
   "mcpServers": {
-    "alpaca": {
-      "command": "uvx",
-      "args": ["alpaca-mcp-server"],
-      "env": {
-        "ALPACA_API_KEY": "YOUR_PAPER_API_KEY_TYPED_HERE_NEVER_IN_CHAT",
-        "ALPACA_SECRET_KEY": "YOUR_PAPER_SECRET_KEY_TYPED_HERE_NEVER_IN_CHAT",
-        "ALPACA_PAPER_TRADE": "true",
-        "ALPACA_TOOLSETS": "account,trading,stock-data"
-      }
+    "kite": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://mcp.kite.trade/mcp"]
     }
   }
 }

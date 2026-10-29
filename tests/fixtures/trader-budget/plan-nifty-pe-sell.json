@@ -1,0 +1,5 @@
+{"created_by": "trader-fno", "symbol": "NIFTY", "exchange": "NSE",
+ "instrument": {"type": "PE", "underlying": "NIFTY", "expiry": "2026-11-03", "strike": 22500,
+                "lot_size": 65, "tradingsymbol": "NIFTY26N0322500PE"},
+ "product": "MIS", "side": "sell", "date": "2026-11-03", "setup": "option",
+ "entry": 80.0, "entry_time": "10:05", "stop": 100.0, "target": 40.0, "flat_by": "15:10"}

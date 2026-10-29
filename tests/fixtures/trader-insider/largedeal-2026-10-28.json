@@ -1,0 +1,16 @@
+{"as_on_date": "28-Oct-2026",
+ "BULK_DEALS_DATA": [
+  {"buySell": "BUY", "clientName": "EXAMPLE GLOBAL FUND LTD", "date": "28-Oct-2026", "name": "Sample Industries Limited",
+   "qty": "650000", "remarks": "-", "symbol": "SAMPLECO", "watp": "117.20"},
+  {"buySell": "SELL", "clientName": "DEMO CAPITAL PARTNERS LLP", "date": "28-Oct-2026", "name": "Sample Industries Limited",
+   "qty": "640000", "remarks": "-", "symbol": "SAMPLECO", "watp": "117.35"},
+  {"buySell": "BUY", "clientName": "SAMPLE RETAIL TRADER", "date": "28-Oct-2026", "name": "Tiny Tech Limited",
+   "qty": "115017", "remarks": "-", "symbol": "TINYTECH", "watp": "119.65"}
+ ],
+ "BLOCK_DEALS_DATA": [
+  {"buySell": "BUY", "clientName": "EXAMPLE MUTUAL FUND A/C EXAMPLE FLEXICAP FUND", "date": "28-Oct-2026",
+   "name": "Demo Finance Limited", "qty": "2000000", "remarks": "-", "symbol": "DEMOFIN", "watp": "702.50"}
+ ],
+ "SHORT_DEALS_DATA": [
+  {"date": "28-Oct-2026", "name": "Beta Cements Limited", "qty": "45000", "symbol": "BETACEM"}
+ ]}

@@ -1,0 +1,24 @@
+{
+ "created_by": "trader-fno",
+ "symbol": "NIFTY",
+ "exchange": "NSE",
+ "instrument": {
+  "type": "CE",
+  "underlying": "NIFTY",
+  "expiry": "2026-11-03",
+  "strike": 22700,
+  "lot_size": 65,
+  "tradingsymbol": "NIFTY26N0322700CE"
+ },
+ "product": "MIS",
+ "side": "buy",
+ "date": "2026-11-03",
+ "setup": "orb",
+ "entry": 70.0,
+ "entry_time": "10:05",
+ "stop": 64.0,
+ "stop_label": "premium stop",
+ "target": 85.0,
+ "target_label": "2.5R",
+ "flat_by": "15:10"
+}

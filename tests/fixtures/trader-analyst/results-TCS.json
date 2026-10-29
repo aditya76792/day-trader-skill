@@ -1,0 +1,41 @@
+[
+ {
+  "symbol": "TCS",
+  "companyName": "Tata Consultancy Services Limited",
+  "audited": "Un-Audited",
+  "consolidated": "Consolidated",
+  "period": "Quarterly",
+  "relatingTo": "Second Quarter",
+  "bank": "N",
+  "filingDate": "09-Oct-2024 19:00",
+  "fromDate": "01-Jul-2024",
+  "toDate": "30-Sep-2024",
+  "xbrl": "https://nsearchives.nseindia.com/corporate/xbrl/INDAS_TCS_Q2FY25_CONS.xml"
+ },
+ {
+  "symbol": "TCS",
+  "companyName": "Tata Consultancy Services Limited",
+  "audited": "Un-Audited",
+  "consolidated": "Consolidated",
+  "period": "Quarterly",
+  "relatingTo": "Third Quarter",
+  "bank": "N",
+  "filingDate": "09-Jan-2025 19:00",
+  "fromDate": "01-Oct-2024",
+  "toDate": "31-Dec-2024",
+  "xbrl": "https://nsearchives.nseindia.com/corporate/xbrl/INDAS_TCS_Q3FY25_CONS.xml"
+ },
+ {
+  "symbol": "TCS",
+  "companyName": "Tata Consultancy Services Limited",
+  "audited": "Un-Audited",
+  "consolidated": "Consolidated",
+  "period": "Quarterly",
+  "relatingTo": "First Quarter",
+  "bank": "N",
+  "filingDate": "11-Jul-2024 19:00",
+  "fromDate": "01-Apr-2024",
+  "toDate": "30-Jun-2024",
+  "xbrl": "https://nsearchives.nseindia.com/corporate/xbrl/INDAS_TCS_Q1FY25_CONS.xml"
+ }
+]
