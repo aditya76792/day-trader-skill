@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "day-trader-skill-india",
-      "description": "Thirteen Claude skills for NSE/BSE: market rules and charges, a chart scanner, a filings and news monitor, an entry timer, an exit planner, a time machine and backtester with Indian costs, an F&O desk, a risk manager, a budget manager, an order executor with a paper broker (never without your yes), price alerts, an earnings analyst and an insider and bulk-deal tracker.",
+      "description": "Fourteen Claude skills for NSE/BSE: market rules and charges, a chart scanner, a filings and news monitor, an entry timer, an exit planner, a time machine and backtester with Indian costs, an F&O desk, a risk manager, a budget manager, an order executor with a paper broker (never without your yes), price alerts, an earnings analyst an insider and bulk-deal tracker, and a live engine for Upstox (paper first, live only after your approval).",
       "source": "./",
       "category": "productivity",
       "homepage": "https://github.com/aditya76792/day-trader-skill"

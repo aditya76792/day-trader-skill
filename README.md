@@ -1,6 +1,6 @@
 # The Day Trader skill, India edition
 
-13 Claude skills for trading Indian markets (NSE/BSE): scan charts, track filings and news, time entries and exits, read option chains, replay outcomes with real Indian charges, and paper trade before you risk a rupee.
+14 Claude skills for trading Indian markets (NSE/BSE): scan charts, track filings and news, time entries and exits, read option chains, replay outcomes with real Indian charges, paper trade on real-time Upstox data, and go live only when you approve it.
 
 This is an adaptation of Jake Schincariol's
 [Day Trader skill](https://github.com/Jakeschincariol/day-trader-skill) (MIT)
@@ -37,7 +37,7 @@ and the paper account: [docs/SETUP.md](docs/SETUP.md).
 Python 3.8 or newer, standard library only. Nothing to pip install. No API
 keys for the data.
 
-## The thirteen
+## The fourteen
 
 | command | job | what it does |
 | --- | --- | --- |
@@ -54,6 +54,7 @@ keys for the data.
 | `/trader-alerts` | Price Alerts | Stop, target, square-off reminder, expiry day, circuit, gap and index circuit-breaker alerts. |
 | `/trader-analyst` | Earnings Analyst | Quarterly results from NSE's XBRL filings: revenue, EBITDA, profit, EPS, growth, what changed. |
 | `/trader-insider` | Insider and Deals Tracker | SEBI insider-trading (PIT) disclosures, promoter buys, sells and pledges, bulk and block deals. |
+| `/trader-live` | Live Engine | Real-time monitoring and signals on Upstox data, entry + stop-loss + target as OCO, square-off, kill switch; paper first, live only after you approve it. |
 
 ## How to use it
 
@@ -94,6 +95,26 @@ For options: `fno.py chain NIFTY` to read the chain, `fno.py plan NIFTY
 --view bullish --write` for a call-buying plan, then budget, risk, broker
 as above. One NIFTY lot is 65 units, so a modest premium stop is a
 four-figure rupee risk; the budget and risk skills say so.
+
+## Real time: the live engine
+
+`trader-live` runs on your Mac during market hours with the Upstox API:
+real-time quotes and 1-minute candles, signals on every completed 5-minute
+bar, sizing and risk checks from the skills above, then entry, stop-loss and
+target (one cancels the other), square-off by 15:10, a kill switch and a
+daily loss halt, all journaled so a restart resumes.
+
+```bash
+python3 trader-live/live.py setup      # you paste your Upstox key and secret into ~/.config/trader-india/.env
+python3 trader-live/live.py login      # each trading morning
+python3 trader-live/live.py validate   # the whole workflow on a simulated day
+python3 trader-live/live.py run        # PAPER trading on real-time data
+```
+
+Live orders stay locked until a passing validation, a full paper session on
+the real-time feed, and your own typed approval (`live.py approve-live`).
+Even then every entry waits for your typed yes. Setup and deployment:
+[docs/LIVE.md](docs/LIVE.md).
 
 ## The tools
 
@@ -195,7 +216,8 @@ trader-broker/      SKILL.md, ticket.py, paper.py, claude_desktop_config.example
 trader-alerts/      SKILL.md, alerts.py, alerts.example.json
 trader-analyst/     SKILL.md, facts.py, metrics.example.json
 trader-insider/     SKILL.md, insider.py
-docs/               CHANGES-INDIA.md, SETUP.md, INDIA_RULES.md, LIMITATIONS.md, CONTRACTS.md
+trader-live/        SKILL.md, live.py, engine.py, upstox.py, env.example, com.trader-india.engine.plist
+docs/               CHANGES-INDIA.md, SETUP.md, LIVE.md, INDIA_RULES.md, LIMITATIONS.md, CONTRACTS.md
 tests/              unittest suite + offline fixtures
 ```
 

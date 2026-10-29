@@ -10,13 +10,13 @@ from _load import ROOT
 # the India edition: the original eleven, Pelosi replaced by the insider tracker, plus market and fno
 SKILLS = ["trader-market", "trader-scanner", "trader-news", "trader-entry", "trader-exit", "trader-timemachine",
           "trader-fno", "trader-risk", "trader-budget", "trader-broker", "trader-alerts", "trader-analyst",
-          "trader-insider"]
-ABOUT = ("13 Claude skills for trading Indian markets (NSE/BSE): scan charts, track filings and news, time entries "
-         "and exits, read option chains, replay outcomes with real Indian charges, and paper trade before you risk "
-         "a rupee.")
+          "trader-insider", "trader-live"]
+ABOUT = ("14 Claude skills for trading Indian markets (NSE/BSE): scan charts, track filings and news, time entries "
+         "and exits, read option chains, replay outcomes with real Indian charges, paper trade on real-time Upstox "
+         "data, and go live only when you approve it.")
 # skills on the way to an order carry the safety block
 ORDER_PATH = ["trader-scanner", "trader-entry", "trader-exit", "trader-timemachine", "trader-fno", "trader-budget",
-              "trader-insider", "trader-risk", "trader-broker", "trader-alerts"]
+              "trader-insider", "trader-risk", "trader-broker", "trader-alerts", "trader-live"]
 US_ONLY = ["trader-pelosi", "trader-copycat", "trader-screener", "trader-tax", "trader-rebalance",
            "NYSE_HOLIDAYS", "eastern_offset", "nasdaqtrader", "SEC_USER_AGENT", "pdt_guard", "max_loss_per_trade_usd"]
 
@@ -87,7 +87,7 @@ class Repo(unittest.TestCase):
             self.assertIn("/" + s, readme, s)
 
     def test_docs_exist(self):
-        for f in ("CHANGES-INDIA.md", "SETUP.md", "INDIA_RULES.md", "LIMITATIONS.md", "CONTRACTS.md"):
+        for f in ("CHANGES-INDIA.md", "SETUP.md", "INDIA_RULES.md", "LIMITATIONS.md", "CONTRACTS.md", "LIVE.md"):
             self.assertTrue(os.path.isfile(os.path.join(ROOT, "docs", f)), f)
 
     def test_no_em_dashes_and_no_personal_email(self):

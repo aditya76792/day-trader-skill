@@ -94,6 +94,11 @@ framework (from 1 April 2026) your broker may require a registered static
 IP for API orders; a few orders a day approved by hand stays far below the
 10 orders-a-second level that needs algo registration.
 
+## 6b. Real time
+
+For real-time monitoring, signals and order management through Upstox (paper first,
+live only after your approval), see [LIVE.md](LIVE.md).
+
 ## 7. Run the tests
 
 ```bash
@@ -101,7 +106,7 @@ cd day-trader-skill
 python3 -m unittest discover -s tests -v
 ```
 
-All tests run offline. At the time of this edition: 365 tests, all
+All tests run offline. At the time of this edition: 390+ tests, all
 passing on Python 3.8+.
 
 ## 8. A quick live check
