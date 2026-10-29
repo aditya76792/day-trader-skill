@@ -61,6 +61,9 @@ CONFIG_DIR = os.path.expanduser(os.environ.get("TRADER_CONFIG_DIR", "~/.config/t
 CACHE_DIR = os.path.expanduser(os.environ.get("TRADER_CACHE_DIR", "~/.cache/trader-india"))
 TOKEN_FILE = os.path.join(CONFIG_DIR, "upstox-token.json")
 ENV_NAMES = ("UPSTOX_API_KEY", "UPSTOX_API_SECRET", "UPSTOX_REDIRECT_URI")
+# Upstox sits behind Cloudflare, which refuses Python's default "Python-urllib" signature
+# (error 1010). Every request names this tool instead.
+UA = "day-trader-skill-india/1.1 (+https://github.com/aditya76792/day-trader-skill)"
 PRODUCT = {"MIS": "I", "CNC": "D", "NRML": "D"}
 PRODUCT_BACK = {"I": "MIS", "D": "CNC", "MTF": "MTF", "CO": "MIS"}
 INDEX_KEYS = {"NIFTY": "NSE_INDEX|Nifty 50", "BANKNIFTY": "NSE_INDEX|Nifty Bank", "FINNIFTY": "NSE_INDEX|Nifty Fin Service",
@@ -225,7 +228,7 @@ def exchange_code(creds, code, opener=None):
     body = urllib.parse.urlencode({"code": code, "client_id": creds.api_key, "client_secret": creds.api_secret,
                                    "redirect_uri": creds.redirect_uri, "grant_type": "authorization_code"}).encode()
     req = urllib.request.Request(API + "/v2/login/authorization/token", data=body, method="POST",
-                                 headers={"Accept": "application/json",
+                                 headers={"Accept": "application/json", "User-Agent": UA,
                                           "Content-Type": "application/x-www-form-urlencoded"})
     op = opener or urllib.request.build_opener()
     try:
@@ -356,7 +359,7 @@ class Client(object):
         for attempt in range(tries):
             (self.orders_rl if write else self.reads_rl).wait()
             req = urllib.request.Request(url, data=data, method=method, headers={
-                "Accept": "application/json", "Content-Type": "application/json",
+                "Accept": "application/json", "Content-Type": "application/json", "User-Agent": UA,
                 "Authorization": "Bearer " + self.token})
             try:
                 with self.opener.open(req, timeout=self.timeout) as r:
@@ -524,7 +527,8 @@ class Instruments(object):
                     raw = fh.read()
             else:
                 url = INSTRUMENTS_URL % exchange
-                raw = fetch(url) if fetch else urllib.request.urlopen(url, timeout=60).read()
+                raw = fetch(url) if fetch else urllib.request.urlopen(
+                    urllib.request.Request(url, headers={"User-Agent": UA}), timeout=60).read()
                 with open(cache + ".tmp", "wb") as fh:
                     fh.write(raw)
                 os.replace(cache + ".tmp", cache)

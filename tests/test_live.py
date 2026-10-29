@@ -100,6 +100,12 @@ class Secrets(unittest.TestCase):
             U.load_token(DT(2026, 10, 29, 3, 30), p)
         self.assertEqual(U.token_expiry(DT(2026, 10, 29, 2, 0)), DT(2026, 10, 29, 3, 30))
 
+    def test_token_exchange_sends_a_user_agent(self):
+        op = FakeOpener([json.dumps({"status": "success", "data": {"access_token": "tok-1", "user_id": "X"}})])
+        c = U.Credentials("KEY1", "SEC1", "http://127.0.0.1:8765/callback", "test")
+        self.assertEqual(U.exchange_code(c, "code1", opener=op)["access_token"], "tok-1")
+        self.assertTrue(op.reqs[0].get_header("User-agent").startswith("day-trader-skill-india"))
+
     def test_login_url_and_redirect_must_be_local(self):
         c = U.Credentials("KEY1", "SEC1", "http://127.0.0.1:8765/callback", "test")
         url = U.login_url(c, "st8")
@@ -120,6 +126,7 @@ class ClientCalls(unittest.TestCase):
         self.assertEqual(got["NSE_EQ|INE002A01018"]["prev_close"], 1196.2)
         self.assertIn("/v3/market-quote/ltp?instrument_key=NSE_EQ|INE002A01018", op.reqs[0].full_url)
         self.assertEqual(op.reqs[0].get_header("Authorization"), "Bearer TOKEN123456")
+        self.assertTrue(op.reqs[0].get_header("User-agent").startswith("day-trader-skill-india"))
 
     def test_candles_newest_first_become_oldest_first(self):
         c, op = client([json.dumps({"status": "success", "data": {"candles": [
