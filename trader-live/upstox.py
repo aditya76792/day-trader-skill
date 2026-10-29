@@ -63,7 +63,7 @@ TOKEN_FILE = os.path.join(CONFIG_DIR, "upstox-token.json")
 ENV_NAMES = ("UPSTOX_API_KEY", "UPSTOX_API_SECRET", "UPSTOX_REDIRECT_URI")
 # Upstox sits behind Cloudflare, which refuses Python's default "Python-urllib" signature
 # (error 1010). Every request names this tool instead.
-UA = "day-trader-skill-india/1.1 (+https://github.com/aditya76792/day-trader-skill)"
+UA = os.environ.get("UPSTOX_USER_AGENT") or "day-trader-skill-india/1.1 (+https://github.com/aditya76792/day-trader-skill)"
 PRODUCT = {"MIS": "I", "CNC": "D", "NRML": "D"}
 PRODUCT_BACK = {"I": "MIS", "D": "CNC", "MTF": "MTF", "CO": "MIS"}
 INDEX_KEYS = {"NIFTY": "NSE_INDEX|Nifty 50", "BANKNIFTY": "NSE_INDEX|Nifty Bank", "FINNIFTY": "NSE_INDEX|Nifty Fin Service",
