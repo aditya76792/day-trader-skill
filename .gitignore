@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+/trader/
+.env
+*.env
+!trader-live/env.example

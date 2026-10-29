@@ -1,0 +1,9 @@
+{"created_by": "trader-exit", "symbol": "RELIANCE", "exchange": "NSE",
+ "instrument": {"type": "EQ"}, "product": "MIS", "side": "buy", "date": "2026-10-28",
+ "setup": "orb", "entry": 1171.2, "entry_time": "09:50", "entry_bar": 6, "interval": "5m",
+ "opening_range": {"high": 1168.0, "low": 1158.4, "minutes": 15},
+ "stop": 1163.2, "stop_rule": "or_mid", "stop_label": "opening-range midpoint",
+ "target": 1187.2, "target_r": 2.0, "target_label": "2R",
+ "risk_per_share": 8.0, "reward_risk": 2.0, "tick": 0.1,
+ "flat_by": "15:10", "costs_per_share": 0.9, "net_reward_risk": 1.78,
+ "circuit": {"band_pct": null, "upper": null, "lower": null}}

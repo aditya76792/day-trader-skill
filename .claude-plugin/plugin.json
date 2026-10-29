@@ -1,22 +1,27 @@
 {
-  "name": "day-trader-skill",
-  "description": "11 Claude skills for day trading: scan thousands of charts, track breaking news, time every entry and exit, and replay every outcome before you risk a dollar.",
-  "version": "2.0.0",
+  "name": "day-trader-skill-india",
+  "description": "14 Claude skills for trading Indian markets (NSE/BSE): scan charts, track filings and news, time entries and exits, read option chains, replay outcomes with real Indian charges, paper trade on real-time Upstox data, and go live only when you approve it.",
+  "version": "1.1.0-india",
   "author": {
-    "name": "Jake Schincariol",
-    "url": "https://opusjake.ai"
+    "name": "Aditya (India edition), based on the Day Trader skill by Jake Schincariol",
+    "url": "https://github.com/aditya76792/day-trader-skill"
   },
-  "homepage": "https://github.com/Jakeschincariol/day-trader-skill",
-  "repository": "https://github.com/Jakeschincariol/day-trader-skill",
+  "homepage": "https://github.com/aditya76792/day-trader-skill",
+  "repository": "https://github.com/aditya76792/day-trader-skill",
   "license": "MIT",
   "keywords": [
     "claude-code",
     "claude-skills",
-    "day-trading",
-    "stock-market",
+    "nse",
+    "bse",
+    "nifty",
+    "india",
+    "intraday",
+    "options",
+    "paper-trading",
     "backtesting",
-    "opening-range-breakout",
-    "paper-trading"
+    "upstox",
+    "live-trading"
   ],
   "skills": "./"
 }

@@ -1,0 +1,73 @@
+{
+  "created_by": "trader-budget",
+  "created_at": "2026-11-03T10:05:00+05:30",
+  "status": "proposed",
+  "paper": true,
+  "note": "Proposals only. Nothing is placed until trader-risk passes each order and you say yes to it in the chat.",
+  "source": "trader/plan.json (NIFTY26N0322700CE orb 2026-11-03)",
+  "orders": [
+    {
+      "exchange": "NSE",
+      "symbol": "NIFTY",
+      "tradingsymbol": "NIFTY26N0322700CE",
+      "instrument": {
+        "type": "CE",
+        "underlying": "NIFTY",
+        "expiry": "2026-11-03",
+        "strike": 22700,
+        "lot_size": 65,
+        "tradingsymbol": "NIFTY26N0322700CE"
+      },
+      "side": "BUY",
+      "qty": 65,
+      "lots": 1,
+      "product": "MIS",
+      "order_type": "LIMIT",
+      "price": 70.0,
+      "trigger_price": null,
+      "validity": "DAY",
+      "variety": "regular",
+      "exits": {
+        "stop_loss": {
+          "side": "SELL",
+          "order_type": "SL",
+          "trigger_price": 64.0,
+          "price": 62.7
+        },
+        "target": {
+          "side": "SELL",
+          "order_type": "LIMIT",
+          "price": 85.0
+        },
+        "how": "Place the stop-loss and the target as two separate orders right after the entry fills. When one fills, cancel the other. Anything still open at the broker's square-off time is closed by the broker for a fee; be flat by 15:10. F&O stop is SL (stop-limit) with a limit buffer, because brokers restrict SL-M and market orders in options: if the price gaps past the limit, the stop does not fill."
+      },
+      "why": "opening-range breakout on NIFTY26N0322700CE: 1 lot (65 units), bound by your premium cap per trade. Loss at the stop Rs 390.00 + charges Rs 57.24 = Rs 447.24.",
+      "plan": {
+        "entry": 70.0,
+        "stop": 64.0,
+        "target": 85.0,
+        "risk_per_share": 6.0,
+        "max_loss": 390.0,
+        "max_loss_with_costs": 447.24,
+        "net_reward_risk": 2.05,
+        "setup": "orb",
+        "date": "2026-11-03",
+        "entry_time": "10:05",
+        "flat_by": "15:10",
+        "entry_from": "plan"
+      },
+      "costs": {
+        "round_trip_at_target": 59.86,
+        "round_trip_at_stop": 57.24,
+        "per_unit_at_stop": 0.88,
+        "broker": "zerodha",
+        "segment": "options"
+      },
+      "margin": {
+        "required": 4550.0,
+        "basis": "option premium paid in full of Rs 4,550.00",
+        "notional": 4550.0
+      }
+    }
+  ]
+}

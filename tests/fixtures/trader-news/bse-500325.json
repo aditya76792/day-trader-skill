@@ -1,0 +1,15 @@
+{"Table": [
+  {"NEWSID": "6f1c2d3e-0001-4a5b-9c8d-111111111111", "SCRIP_CD": 500325, "XML_NAME": "",
+   "NEWSSUB": "Reliance Industries Ltd - 500325 - Announcement under Regulation 30 (LODR)-Credit Rating",
+   "DT_TM": "2026-10-28T19:20:11.553", "NEWS_DT": "2026-10-28T19:20:11.553", "CRITICALNEWS": 0,
+   "ANNOUNCEMENT_TYPE": "A", "QUARTER_ID": null, "FILESTATUS": "N", "ATTACHMENTNAME": "6f1c2d3e-0001.pdf",
+   "MORE": "", "HEADLINE": "ICRA has reaffirmed the long-term credit rating of the Company",
+   "CATEGORYNAME": "Company Update", "OLD": 1, "RN": 1, "PDFFLAG": 0, "NSURL": "", "SLONGNAME": "Reliance Industries Ltd",
+   "AGENDA_ID": 0, "TotalPageCnt": 1, "News_submission_dt": "2026-10-28T19:19:58", "DissemDT": "2026-10-28T19:20:11.553",
+   "TimeDiff": "00:00:13", "Fld_Attachsize": 182345, "SUBCATNAME": "Credit Rating", "AUDIO_VIDEO_FILE": null},
+  {"NEWSID": "6f1c2d3e-0002-4a5b-9c8d-222222222222", "SCRIP_CD": 500325,
+   "NEWSSUB": "Reliance Industries Ltd - 500325 - Allotment Of Equity Shares On Preferential Basis",
+   "NEWS_DT": "2026-10-28T12:05:00", "ATTACHMENTNAME": "", "HEADLINE": "",
+   "CATEGORYNAME": "Corp. Action", "SLONGNAME": "Reliance Industries Ltd"},
+  {"junk": true}
+], "Table1": [{"ROWCNT": 3}]}

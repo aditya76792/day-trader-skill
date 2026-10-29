@@ -1,9 +1,14 @@
 {
   "rules": [
     {"id": "opening-bell", "type": "opening_bell"},
-    {"id": "tsla-plan-stop", "symbol": "TSLA", "type": "stop", "price": 358.32, "note": "plan stop: opening-range midpoint", "date": "2026-10-19"},
-    {"id": "tsla-plan-target", "symbol": "TSLA", "type": "target", "price": 370.04, "note": "plan target: 1R (one times the risk)", "date": "2026-10-19"},
-    {"id": "tsla-flat-by", "symbol": "TSLA", "type": "time", "at": "15:55", "label": "flat by close", "before_close": true, "date": "2026-10-19"},
-    {"id": "tsla-move-3", "symbol": "TSLA", "type": "pct_move", "pct": 3}
+    {"id": "reliance-plan-stop", "symbol": "RELIANCE", "type": "stop", "price": 1163.2, "side": "buy", "note": "plan stop: opening-range midpoint", "date": "2026-10-28"},
+    {"id": "reliance-plan-target", "symbol": "RELIANCE", "type": "target", "price": 1187.2, "side": "buy", "note": "plan target: 2R", "date": "2026-10-28"},
+    {"id": "reliance-flat-by", "symbol": "RELIANCE", "type": "time", "at": "15:10", "label": "flat by 15:10", "date": "2026-10-28"},
+    {"id": "square-off-equity", "type": "square_off", "segment": "equity", "minutes_before": 10},
+    {"id": "nifty-expiry-1330", "type": "expiry", "underlying": "NIFTY", "at": "13:30"},
+    {"id": "nifty-index-move-2", "symbol": "NIFTY", "type": "index_move", "pct": 2},
+    {"id": "reliance-gap-1.5", "symbol": "RELIANCE", "type": "gap", "pct": 1.5},
+    {"id": "sampleco-circuit-2", "symbol": "SAMPLECO", "type": "circuit", "within_pct": 2, "band_pct": 5},
+    {"id": "tcs-pct-move-3", "symbol": "TCS", "type": "pct_move", "pct": 3}
   ]
 }

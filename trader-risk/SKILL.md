@@ -1,30 +1,28 @@
 ---
 name: trader-risk
 description: >-
-  Risk Manager. Checks every trade against your limits and stops anything
-  over them, before it can reach the broker. For a day trade: a stop is
-  required, the loss at the stop must fit your max loss per trade (measured
-  from the higher of the plan's entry and a fresh price), reward:risk must
-  meet your minimum, the day's total risk must fit your daily loss limit, no
-  more than your trades per day, and no new entries outside your entry
-  window or when the market is closed. It also keeps the basics: blocked
-  tickers, order size, position cap, cash buffer, margin, short sales,
-  options and crypto, malformed or bad bracket orders, duplicates and a daily
-  order limit. Getting out is never blocked by a day limit. Prints PASS or
-  BLOCK with the reason and records the verdicts so trader-broker only shows
-  an order that passed. Use when the user says "check my order", "is this
-  safe", "risk check", "does this break my rules", "can I take this trade",
-  "how much have I risked today", or before /trader-broker, always.
+  Risk Manager for NSE/BSE orders. Checks every proposed order against your
+  limits and Indian market rules before it can reach a broker, and prints
+  PASS or BLOCK with the reason: a stop is required, the loss at the stop
+  INCLUDING charges must fit your max loss, net reward:risk after charges,
+  daily loss (realised plus today's risk), trades per day, the entry window
+  in IST, NSE holidays and 09:15-15:30 hours (AMO aside), MIS after flat_by
+  or the broker's square-off, expiry-day cutoffs, MIS/CNC/NRML and short-sale
+  rules, trade-for-trade series, ASM/GSM and F&O ban lists, circuit limits,
+  lot multiples, max lots, option premium cap, option selling and futures
+  switches, ticks, margin and stale prices. Use when the user says "check my
+  order", "is this safe", "risk check", "can I take this trade", "how much
+  have I lost today", or before /trader-broker, always.
 argument-hint: "[path to orders.json]"
 ---
 
 # trader-risk
 
 The Risk Manager is the gate between a proposal and the broker. Every order
-written by trader-budget or trader-broker's flatten passes through it. A
-BLOCK is final for that order: it does not go to the user for a yes, and it
-does not go to the broker. Most people who day trade lose money. These limits
-keep each loss and each day's losses small. They do not make a trade win.
+written by trader-budget or by trader-broker's flatten goes through it. A
+BLOCK is final for that order: it does not go to the user for a yes and it
+does not go to any broker, paper or live. These limits keep each loss and
+each day's losses small. They do not make a trade win. Not financial advice.
 
 `${CLAUDE_SKILL_DIR}` below is this skill's folder (where this SKILL.md lives).
 
@@ -32,141 +30,101 @@ keep each loss and each day's losses small. They do not make a trade win.
 python3 "${CLAUDE_SKILL_DIR}/check.py"                           # trader/ files; writes trader/state/risk.json
 python3 "${CLAUDE_SKILL_DIR}/check.py" --json
 python3 "${CLAUDE_SKILL_DIR}/check.py" --no-write                # look without recording
-python3 "${CLAUDE_SKILL_DIR}/check.py" --now "2026-10-19 10:15"  # pin the clock (New York time)
+python3 "${CLAUDE_SKILL_DIR}/check.py" --now "2026-10-28 09:50"  # pin the clock (IST)
 ```
+
+Exit code 0 when every order passes, 1 when any order is blocked or on an error.
 
 ## What it reads and writes
 
 | file | what |
 | --- | --- |
 | `trader/orders.json` | the proposed orders (trader-budget, or trader-broker's flatten) |
-| `trader/config.json` | the limits (trader-budget ships `config.example.json`) |
-| `trader/portfolio.json` | cash and holdings; if missing, a fresh account funded with the budget |
-| `trader/prices.json` | a fresh price raises the entry it measures risk from; also values holdings |
-| `trader/state/broker.json` | what was placed today: duplicates, trades per day, daily loss, day trades |
-| `trader/state/risk.json` | the verdicts it writes, with a fingerprint of each exact order |
+| `trader/config.json` | the limits (`trader-budget/config.example.json`) |
+| `trader/portfolio.json` | live cash and positions (`cash_inr`, `positions` keyed by tradingsymbol and product) |
+| `trader/paper/ledger.json` | in paper mode: the paper broker's cash, positions and realised P&L |
+| `trader/prices.json` | fresh quotes (trader-alerts); MARKET entries need one under 15 minutes old |
+| `trader/state/broker.json` | what was placed today and live realised P&L (trader-broker) |
+| `trader/state/risk.json` | the verdicts it writes: `checks` with fingerprint, verdict, reasons, date, time |
 
 ## Entries and exits
 
-An **entry** opens or adds to a position: a buy, or a sell that would go
-short. An **exit** only reduces what you already hold. Getting out must
-always be possible, so an exit is checked for format, asset and short sales
-only. Every other rule (day limits, entry window, loss, reward:risk, blocked
-list, size, duplicates) turns into a warning for an exit, never a BLOCK.
+An **exit** only reduces a position you hold (same tradingsymbol and
+product). Getting out must always be possible, so an exit is checked for
+format, tick and lot size only; every day rule becomes a warning. Anything
+else is an **entry**.
 
-## The checks
-
-Orders are checked in file order, as if each passed order had filled, so a
-batch that is fine order by order but breaks a limit together is caught.
+## The checks (entries)
 
 | check | blocks when |
 | --- | --- |
-| format | no symbol, side not buy or sell, both or neither of qty and notional, a notional order that is not market + day (Alpaca's rule), a limit order with no limit price; a bracket that is not whole shares, not `day` or `gtc`, or misses its stop-loss or take-profit |
-| asset | an option symbol while `allow_options` is false; crypto or anything that is not a US stock or ETF ticker |
-| short | a sell of more than you hold (`allow_short` false) |
-| blocked | (entries) the ticker is on the `blocked` list |
-| size | (entries) under `min_order_usd` or over `max_order_usd` |
-| position | (entries) the stock would be over `max_position_pct` of the account |
-| cash | (entries) the buy would leave less than the cash buffer, or need margin |
-| stop | (entries) no stop while `require_stop` is true (a bracket `stop_loss_stop_price`, or the order's plan stop); a stop on the wrong side of the entry |
-| loss | (entries) qty x (entry minus stop) over `max_loss_per_trade_usd` |
-| reward:risk | (entries) (target minus entry) / (entry minus stop) under `min_reward_risk` |
-| daily loss | (entries) the max losses at the stops of today's entries, plus this one, over `max_daily_loss_usd` |
-| trades | (entries) `max_trades_per_day` entries already placed today |
-| window | (entries) before `no_entries_before` or after `no_entries_after`, or the market is closed |
-| pdt | (entries, only with `pdt_guard` true) 3 day trades already in the last 5 business days |
-| duplicate | (entries) the same symbol and side twice in one batch, or already placed today |
-| daily limit | (entries) `max_orders_per_day` orders already placed today |
+| calendar | not an NSE/BSE trading day (weekend or exchange holiday, e.g. Diwali-Balipratipada 2026-11-10) |
+| session | outside 09:15-15:30 IST, unless the order is an AMO (`variety: amo`). AMOs: refused while the market is open, refused for MIS entries (they would fill at the 09:15 open, before your entry window), refused for F&O entries into an expiry day; CNC/NRML AMOs pass with a gap warning, also on holidays and weekends |
+| daily loss | per symbol, the larger of today's planned max losses and the realised loss (a stop that filled past its trigger counts at the real loss), plus this order; the paper ledger counts in paper mode, live fills in live mode |
+| F&O stop-limit | the loss is counted at the SL limit price (the worst price the stop can fill at), not the trigger |
+| window | before `no_entries_before` / after `no_entries_after`; MIS at or after `flat_by` or the broker's auto square-off (Zerodha 15:25 equity, 15:26 F&O); F&O on its expiry day after `expiry_day_last_entry` |
+| product | MIS intraday, CNC needs `allow_swing`, NRML only for F&O, CNC never for F&O |
+| short | an equity sell you do not hold without `allow_short`; any CNC short (it fails settlement and goes to the auction) |
+| series | a trade-for-trade series (`block_series`: BE, BZ ...) as MIS |
+| lists | `blocked`, `asm_gsm`; `fno_ban` blocks new F&O positions in that underlying |
+| circuit | entry within `avoid_circuit_within_pct` of the circuit you would run into, or outside the band |
+| options / futures | an option SELL without `allow_option_selling`, a future without `allow_futures` |
+| lots / premium | qty not a multiple of the lot, more than `max_lots_per_trade`, premium over `max_premium_per_trade_inr` |
+| stop | no stop while `require_stop`; a stop on the wrong side; SL-M stops on F&O (use SL with a limit) |
+| loss | qty x (entry - stop) + round-trip charges at the stop over `max_loss_per_trade_inr` |
+| reward:risk | (reward - charges at the target) / (loss incl. charges) under `min_reward_risk` |
+| daily loss | the larger of today's realised loss and today's entries' max losses, plus this one, over `max_daily_loss_inr` |
+| trades / orders | `max_trades_per_day` entries or `max_orders_per_day` orders already placed; a duplicate |
+| size / margin | over `max_position_pct` of capital or `max_order_inr`, under `min_order_inr`, margin over the cash after the buffer |
+| tick | a price not on the exchange tick (the exchange rejects it) |
+| stale price | a MARKET or SL-M entry without a quote under 15 minutes old |
 
 How the numbers work:
 
-- **The entry it measures from**: the limit price for a limit order. For a
-  market order, the HIGHER of the plan's entry and a fresh price from
-  `trader/prices.json` (under 15 minutes old). A plan written at 10:15 cannot
-  understate the risk at 10:55 after the price ran up. An older price is not
-  used, and it says so.
-- **Daily loss** counts the full max loss of every entry placed today, win or
-  lose, as trader-broker logged it. Three full-size trades use up a $150 day.
-- **The window** is New York time, worked out in the tool (daylight saving
-  included), never from the computer's clock zone. Weekends and NYSE holidays
-  are closed. On a 1:00 p.m. early close the window ends 3 hours earlier too.
-  Set both `no_entries_*` to null to switch the window off.
-- **pdt_guard** (off by default) counts a day trade as a symbol bought and
-  sold on the same day in the log, plus any entry placed today (it is meant
-  to be flat by the close). FINRA removed the $25,000 pattern-day-trader
-  minimum (Regulatory Notice 26-10, effective June 4, 2026; firms may phase
-  in until October 20, 2027), so some brokers still apply the old rule: turn
-  `pdt_guard` on if yours does.
-
-Warnings do not block, but say them to the user: a LIVE account, a number
-sent as a number instead of a string, a stop that lives only in the plan and
-not at the broker, a price too old to use, an early close today.
+- **The entry it measures from**: the limit price for LIMIT and SL orders;
+  for MARKET the worse of the plan's entry and a fresh quote, so a plan from
+  09:50 cannot understate the risk at 10:40.
+- **Charges** come from `market.py` (STT, exchange charges, SEBI fee, stamp
+  duty, GST, the broker's brokerage, DP on a delivery sell), so a CNC trade
+  carries more cost than the same MIS trade.
+- **Daily loss** never resets on a winning trade: a full-size loss used up
+  is used up.
+- Warnings do not block but say them: a LIVE account, an AMO, a stop that
+  lives only in the plan, an SL limit that can be skipped in a gap, physical
+  settlement of stock options held into expiry, a futures margin estimate.
 
 ## Steps
 
-1. If the price may have moved since the plan, refresh it first
-   (trader-alerts: `alerts.py quote TSLA --write`).
-2. Run `check.py`. Exit code 0 means every order passed, 1 means at least one
-   was blocked.
-3. Tell the user the result in plain words, order by order: the max loss at
-   the stop, reward:risk, and how much of today's limits it uses. For a
-   BLOCK, give the reason and the fix (fewer shares, a closer stop from
-   trader-exit, wait for the window, or skip the trade). Never change a
-   limit yourself.
-4. If the order changes in any way, run the check again. trader-broker matches
-   each order to its verdict by fingerprint, so an edited order is not ready
-   until it passes again, and a verdict from yesterday does not count today.
+1. If the price may have moved, refresh it (trader-alerts quote --write).
+2. Run `check.py`.
+3. Tell the user, order by order: PASS or BLOCK, the max loss at the stop
+   with charges, net reward:risk, and how much of today's limits it uses.
+   For a BLOCK give the reason and the fix (fewer shares, a closer stop,
+   wait for the window, skip the trade). Never change a limit yourself.
+4. If the order changes in any way, check again: trader-broker matches each
+   verdict by fingerprint (sha1 of exchange, tradingsymbol, side, qty,
+   product, order type, price, trigger price) and checks the exits did not
+   change; a verdict from another day does not count.
 
-## Example: the reel
-
-The TSLA bracket from trader-budget at 10:15 AM on Monday 2026-10-19, on a
-fresh $5,000 paper account with the example config:
+## Example
 
 ```
-PASS  #1 buy TSLA 8 shares, entry
-          entry 364.18 (the plan's entry), stop 358.32, target 370.04: risk 5.86 a share
-          max loss $46.88 (limit $50), reward:risk 1.00 (min 1)
-          today before this: 0 of 3 trades, $0 of $150 daily loss
-
-1 passed, 0 blocked at 2026-10-19 10:15 New York. Cash after the passed orders: $2,086.56 (paper account).
+PASS  #1 BUY 42 RELIANCE MIS, entry
+          entry 1171.20 (the limit price), stop 1163.20, target 1187.20: 42 x 8.00 = Rs 336.00 at the stop + charges Rs 52.08 = Rs 388.08
+          limit Rs 1,000 a trade; net reward:risk 1.60 (min 1.5)
 ```
 
-One more share and it is blocked:
-
-```
-BLOCK #1 buy TSLA 9 shares, entry
-          entry 364.18 (the plan's entry), stop 358.32, target 370.04: risk 5.86 a share
-          max loss $52.74 (limit $50), reward:risk 1.00 (min 1)
-          today before this: 0 of 3 trades, $0 of $150 daily loss
-        - loss: 9 shares x 5.86 risk a share = $52.74 at the stop, over your $50 max loss per trade
-```
-
-The same 8 shares checked at 10:55 with the real 10:52 quote (366.48) in
-`trader/prices.json` are blocked twice: 8 x 8.16 = $65.28 at the stop, and
-reward:risk 0.44. At 9:40 they are blocked by the window (no new entries
-before 9:45). The 3:55 PM sell that closes the position passes, even though
-it is after the 3:30 entry cutoff: it is an exit.
+The same order on 2026-11-10 is blocked (exchange holiday). 125 shares are
+blocked even though 125 x 8.00 is exactly Rs 1,000: the charges take it over.
+A NIFTY call at 13:45 on its expiry day is blocked by the 13:30 cutoff.
 
 ## Rules
 
-- A PASS only means the order is allowed to be shown to the user. It is not a yes.
-- Every number comes from the config, the order, the portfolio, the prices or the broker log.
-- Free Yahoo prices are unofficial and can lag; the broker's price is the one that fills, and a
-  stop can fill worse than its price in a fast market.
-
-## What it never does
-
-It never places an order, never edits an order to make it pass, never
-loosens a limit, never blocks a sell that only gets the user out, and never
-treats a PASS as the user's yes.
-
-## Safety
-
-- Education and tooling, not financial advice. A PASS is a rules check, not a recommendation.
-- Paper trading by default (`"paper": true`). Going live is the user's own decision, in their own config.
-- Nothing in this pack places an order except trader-broker, and only when all three hold: trader-risk
-  passed that exact order today, the user typed an explicit yes for that one order in the chat, and the
-  user clicked Allow once on Claude's own card because the order tool is set to "Needs approval"
-  (Customize > Connectors > tool permissions). Never set an order tool to "Always allow".
-- No options, margin, short selling or leverage unless the config allows it and the user confirms.
-- Broker keys live in environment variables or the Claude Desktop config, never in the chat.
+- A PASS only means the order may be shown to the user. It is not a yes, and no order goes through
+  without the user's explicit "yes" for that one order in trader-broker.
+- It never places an order, never edits an order to make it pass, never loosens a limit, never blocks
+  an exit that only gets the user out.
+- Every number comes from the config, the order, the account, the prices or the broker log.
+- Quotes from Yahoo/NSE/BSE public endpoints are unofficial, delayed and can break. The broker's price
+  is the one that fills, and a stop can fill worse than its price in a fast market or a gap.
+- Not financial advice. Paper trading by default (`"paper": true`).

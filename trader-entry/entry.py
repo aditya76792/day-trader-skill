@@ -1,50 +1,59 @@
 #!/usr/bin/env python3
-"""Entry Timer for trader-entry: watches a setup bar by bar and says the
-moment to get in. Standard library only. Long side only. It never places an order.
+"""Entry Timer for trader-entry (India edition): watches a setup on an NSE/BSE
+stock (or index, for analysis) bar by bar and says the moment to get in.
+Standard library only. It never places an order.
 
-    python3 entry.py check TSLA                          # opening-range breakout, 5-minute bars
-    python3 entry.py check TSLA --now "2026-10-19 10:15" --offline TSLA.json
-    python3 entry.py check TSLA --setup level --level 371.20    # first close above a price
-    python3 entry.py check TSLA --interval 1m --min-volume-x 1.5 --write
-    python3 entry.py watch TSLA --every 30 --until 15:30  # one line per closed bar
-    python3 entry.py watchlist                            # every hit in trader/watchlist.json
+    python3 entry.py check RELIANCE                      # opening-range breakout, 5-minute bars
+    python3 entry.py check RELIANCE --now "2026-10-28 09:50" --offline RELIANCE.json
+    python3 entry.py check TCS --setup level --level 3120.50   # first close above a price
+    python3 entry.py check SBIN --setup vwap_reclaim           # a close back above VWAP
+    python3 entry.py check TMPV --setup gap                    # gap-and-go after the first 15 minutes
+    python3 entry.py check INFY --side sell                    # a short: needs allow_short and MIS
+    python3 entry.py check NIFTY                               # index: analysis only, trade via trader-fno
+    python3 entry.py watch RELIANCE --until 14:45              # one line per closed bar
+    python3 entry.py watchlist                                 # every hit in trader/watchlist.json
 
-Setups (v2 plans longs only):
-  orb    opening-range breakout. The range is the high and low of the first
-         --or-minutes (default 15: the 9:30, 9:35 and 9:40 five-minute bars).
-         It triggers on the first COMPLETED bar after the range that CLOSES
-         above the range high. A wick above the high is not a trigger.
-  level  the first completed bar that closes above --level (for example a
-         20-day high from trader-scanner).
-  --min-volume-x X  the trigger bar also needs at least X times the average
-         volume of the opening-range bars (the 9:30 bar carries the opening
-         auction, so 1.0 is already a high bar).
+Session (NSE/BSE cash and F&O, IST, no daylight saving): pre-open call
+auction 09:00-09:15 sets the opening price and makes no bars; the normal
+market runs 09:15-15:30 = 75 five-minute bars (375 one-minute bars). The
+first bar is 09:15-09:20; a bar's time is its CLOSE time (the 09:45 bar
+closes at 09:50) and a bar counts only once it has closed.
 
-A trigger's time is the trigger bar's CLOSE time (the 10:10 bar closes at
-10:15 AM) and its price is that close, to the cent. Only bars on the interval
-grid count (Yahoo's live tick, e.g. 10:49:45, is dropped) and a bar counts only
-once it has closed: now >= its start + the interval.
+Setups:
+  orb           opening-range breakout. The range is the first --or-minutes
+                (default 15: the 09:15, 09:20 and 09:25 bars, set at 09:30).
+                Long: the first completed bar after the range that CLOSES above
+                the range high. Short: closes below the range low.
+  level         the first completed bar that closes above (short: below) --level.
+  vwap_reclaim  after the range, the first bar that closes back above the
+                session VWAP after the bar before it closed below (short: the
+                mirror). Needs volume, so not for an index.
+  gap           gap-and-go: the stock opened 2% or more beyond the previous
+                close (up for a long, down for a short), the gap did not fill in
+                the first 15 minutes, and a bar then closes beyond the range.
 
-Statuses: triggered; waiting (not open yet, range still forming, or no close
-above the level yet); expired (no trigger by no_entries_after, default 15:30;
-on a 1:00 p.m. early close the cutoff moves up three hours with the close);
-no-data (the market is closed today or Yahoo sent no bars).
+Time limits (trader/config.json, IST): no_entries_before (09:30) and
+no_entries_after (14:45). On an expiry day of the instrument (NIFTY weekly on
+Tuesday, monthly index and stock F&O on the last Tuesday, SENSEX on Thursday,
+moved earlier for a holiday) an F&O entry also stops at expiry_day_last_entry
+(13:30). Brokers square off MIS positions around 15:15-15:26 on their own.
 
-trader/config.json (optional): "no_entries_before" (09:45) and
-"no_entries_after" (15:30), New York time.
+Filters, reported in words and in trader/entry.json: the gap against the
+previous close, VWAP so far (price above or below it), and circuit
+proximity when the stock's price band is known ("bands": {"SYM": 5} in the
+config, or --band 5). A long within avoid_circuit_within_pct (2%) of the upper
+circuit (a short near the lower one) is blocked: it can lock at the circuit
+and you may not be able to exit. Symbols on the config's blocked, asm_gsm or
+(for F&O) fno_ban lists, and trade-for-trade series (block_series: BE, BZ ...),
+are refused before any data is read.
 
-watch wakes just after each bar closes (bars only change then), re-polls every
---every seconds (default 30) while Yahoo has not posted the new bar, prints one
-line per closed bar and stops on a trigger (exit 0, writes trader/entry.json),
-on expiry, at the close or at --until (exit 1). With --now or --offline it runs
-on a simulated clock and replays the day without sleeping.
+Shorts: only with "allow_short": true and product MIS. A cash short in India
+must be bought back the same day; one that is not covered goes to the
+exchange auction with a penalty.
 
-Data: Yahoo's free chart JSON (unofficial, can lag, bars not single trades)
-  https://query2.finance.yahoo.com/v8/finance/chart/TSLA?range=1d&interval=5m
-  falls back to query1 on HTTP 429 or 5xx; a 429 gets one retry after a pause.
-  --offline PATH reads a saved chart JSON (.json or .json.gz) instead, or
-  PATH/<TICKER>.json when PATH is a folder. Without --now, an offline file is
-  read as of its own time (meta.regularMarketTime).
+Data: Yahoo's free chart JSON through market.Net (unofficial, delayed, can
+break). --offline PATH reads a saved chart JSON (.json/.json.gz) or
+PATH/<SYMBOL>.json. Without --now an offline file is read as of its own time.
 
 Exit codes: check 0 = triggered, 1 = anything else or an error. watch 0 on a
 trigger, 1 otherwise. watchlist 0 when at least one symbol triggered.
@@ -52,629 +61,617 @@ trigger, 1 otherwise. watchlist 0 when at least one symbol triggered.
 
 import argparse
 import datetime
-import gzip
 import json
 import os
-import re
 import sys
 import time
-import urllib.error
-import urllib.request
 
-UA = "Mozilla/5.0 (compatible; day-trader-skill/2.0; +https://github.com/Jakeschincariol/day-trader-skill)"
-PAUSE = 0.5      # seconds between requests to the free endpoint
-BACKOFF = 5.0    # seconds before the one retry after an HTTP 429
+HERE = os.path.dirname(os.path.abspath(__file__))
+for _p in (os.path.join(HERE, "..", "trader-market"), os.path.join(HERE, "trader-market")):
+    if os.path.isfile(os.path.join(_p, "market.py")) and _p not in sys.path:
+        sys.path.insert(0, _p)
+import market as M  # noqa: E402
+
+Err = M.MarketError
+INTERVALS = {"1m": 60, "5m": 300}
+SETUPS = ("orb", "level", "vwap_reclaim", "gap")
+FNO = ("FUT", "CE", "PE")
 GRACE = 2        # seconds after a bar closes before watch asks for it
 SETTLE = 60      # seconds a closed bar may wait for Yahoo's data to catch up
-HOSTS = ("query2", "query1")
-INTERVALS = {"1m": 60, "5m": 300}
-DEFAULTS = {"no_entries_before": "09:45", "no_entries_after": "15:30"}
-EPOCH = datetime.datetime(1970, 1, 1)
-
-NYSE_HOLIDAYS = {
-    "2026-01-01": "New Year's Day",
-    "2026-01-19": "Martin Luther King, Jr. Day",
-    "2026-02-16": "Washington's Birthday",
-    "2026-04-03": "Good Friday",
-    "2026-05-25": "Memorial Day",
-    "2026-06-19": "Juneteenth National Independence Day",
-    "2026-07-03": "Independence Day (observed)",
-    "2026-09-07": "Labor Day",
-    "2026-11-26": "Thanksgiving Day",
-    "2026-12-25": "Christmas Day",
-    "2027-01-01": "New Year's Day",
-    "2027-01-18": "Martin Luther King, Jr. Day",
-    "2027-02-15": "Washington's Birthday",
-    "2027-03-26": "Good Friday",
-    "2027-05-31": "Memorial Day",
-    "2027-06-18": "Juneteenth National Independence Day (observed)",
-    "2027-07-05": "Independence Day (observed)",
-    "2027-09-06": "Labor Day",
-    "2027-11-25": "Thanksgiving Day",
-    "2027-12-24": "Christmas Day (observed)",
-}
-NYSE_EARLY_CLOSE = {  # 1:00 p.m. ET
-    "2026-11-27": "day after Thanksgiving",
-    "2026-12-24": "Christmas Eve",
-    "2027-11-26": "day after Thanksgiving",
-}
-CALENDAR_YEARS = (2026, 2027)
-OPEN = datetime.time(9, 30)
-CLOSE = datetime.time(16, 0)
-EARLY = datetime.time(13, 0)
+GAP_LARGE = 2.0  # percent: a gap-and-go
+NET_FACTORY = M.Net
+SETUP_WORDS = {"orb": "opening-range breakout", "level": "close beyond a level",
+               "vwap_reclaim": "VWAP reclaim", "gap": "gap-and-go"}
 
 
-class EntryError(Exception):
-    pass
+# ---------------------------------------------------------------- small helpers
 
-
-# ---------------------------------------------------------------- time
-
-def _nth_sunday(year, month, n):
-    d = datetime.date(year, month, 1)
-    d += datetime.timedelta(days=(6 - d.weekday()) % 7)
-    return d + datetime.timedelta(weeks=n - 1)
-
-
-def eastern_offset(utc):
-    """Hours from UTC for New York: -4 in daylight time, -5 otherwise.
-    DST runs from 2:00 a.m. on the second Sunday of March to 2:00 a.m. on the
-    first Sunday of November (US rule since 2007)."""
-    y = utc.year
-    start = datetime.datetime.combine(_nth_sunday(y, 3, 2), datetime.time(7, 0))   # 2:00 EST
-    end = datetime.datetime.combine(_nth_sunday(y, 11, 1), datetime.time(6, 0))    # 2:00 EDT
-    naive = utc.replace(tzinfo=None)
-    return -4 if start <= naive < end else -5
-
-
-def to_eastern(utc):
-    return utc.replace(tzinfo=None) + datetime.timedelta(hours=eastern_offset(utc))
-
-
-def eastern_to_utc(local):
-    for off in (-4, -5):
-        utc = local - datetime.timedelta(hours=off)
-        if eastern_offset(utc) == off:
-            return utc
-    return local + datetime.timedelta(hours=5)
-
-
-def utc_now():
-    return datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0, tzinfo=None)
-
-
-def utc_of(ts):
-    """Unix seconds -> naive UTC, without the machine's time zone."""
-    return EPOCH + datetime.timedelta(seconds=int(ts))
-
-
-def ts_of(utc):
-    return int((utc.replace(tzinfo=None) - EPOCH).total_seconds())
-
-
-def iso(utc):
-    return utc.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def parse_now(text):
-    """--now -> naive UTC. "2026-10-19 10:15" (or ...T10:15, or just 10:15 for
-    today) is New York time; an offset or Z makes it absolute."""
-    if not text:
-        return utc_now()
-    t = text.strip()
-    if t.upper().endswith(" ET"):
-        t = t[:-3].strip()
-    if re.match(r"^\d{1,2}:\d{2}$", t):
-        t = "%s %s" % (to_eastern(utc_now()).date().isoformat(), t.zfill(5))
-    t = t.replace("Z", "+00:00")
-    try:
-        dt = datetime.datetime.fromisoformat(t)
-    except ValueError:
-        raise EntryError('--now wants a New York time like "2026-10-19 10:15" (or ...Z for UTC)')
-    if dt.tzinfo is None:
-        return eastern_to_utc(dt)
-    return (dt - dt.utcoffset()).replace(tzinfo=None)
-
-
-def parse_hhmm(text, what):
-    m = re.match(r"^\s*(\d{1,2}):(\d{2})\s*$", str(text))
-    if not m or int(m.group(1)) > 23 or int(m.group(2)) > 59:
-        raise EntryError("%s wants a New York time like 15:30, not %r" % (what, text))
-    return datetime.time(int(m.group(1)), int(m.group(2)))
-
-
-def hm(t):
-    """10:10, 09:45: the contract's wall-clock form."""
-    return "%02d:%02d" % (t.hour, t.minute)
+def r2(x):
+    return None if x is None else round(float(x), 2) + 0.0
 
 
 def short(t):
-    """9:45, 10:10: for sentences."""
-    return "%d:%02d" % (t.hour, t.minute)
+    """9:50 AM, for sentences."""
+    return M.ampm(t)
 
 
-def ampm(t):
-    h = t.hour % 12 or 12
-    return "%d:%02d %s" % (h, t.minute, "AM" if t.hour < 12 else "PM")
+def stamp(now):
+    return now.strftime("%Y-%m-%dT%H:%M:%S") + "+05:30"
 
 
-def trading_day(d):
-    """(is_trading_day, reason). Weekends and the NYSE holiday list."""
-    if d.weekday() >= 5:
-        return False, "weekend"
-    name = NYSE_HOLIDAYS.get(d.isoformat())
-    if name:
-        return False, "NYSE holiday: " + name
-    return True, ""
+def norm_symbol(raw, exchange):
+    """'reliance' -> ('RELIANCE', 'NSE'); 'RELIANCE.BO' -> ('RELIANCE', 'BSE')."""
+    s = str(raw or "").strip().upper()
+    if s.endswith(".BO"):
+        exchange, s = "BSE", s[:-3]
+    elif s.endswith(".NS"):
+        exchange, s = "NSE", s[:-3]
+    if s.startswith("^"):
+        s = M.plain_symbol(s)
+    if not M.valid_symbol(s):
+        raise Err("%r is not an NSE/BSE trading symbol (like RELIANCE, M&M, BAJAJ-AUTO or NIFTY)" % raw)
+    if M.is_index(s):
+        exchange = M.exchange_of(s)
+    return s, (exchange or "NSE").upper()
 
 
-def session(d):
-    """(open_time, close_time) in New York time, or None if closed all day."""
-    ok, _ = trading_day(d)
-    if not ok:
-        return None
-    return OPEN, (EARLY if d.isoformat() in NYSE_EARLY_CLOSE else CLOSE)
-
-
-def next_open(d):
-    nd = d + datetime.timedelta(days=1)
-    for _ in range(15):
-        if session(nd):
-            return "%s 09:30" % nd.isoformat()
-        nd += datetime.timedelta(days=1)
-    return None
-
-
-# ---------------------------------------------------------------- Yahoo
-
-def yahoo_symbol(sym):
-    return sym.upper().replace(".", "-")
-
-
-def chart_path(sym, rng, interval):
-    return "/v8/finance/chart/%s?range=%s&interval=%s" % (yahoo_symbol(sym), rng, interval)
-
+# ---------------------------------------------------------------- data
 
 def chart_range(day, today, interval):
-    """The smallest Yahoo range that still holds the session of `day`."""
-    back = (today - day).days
-    if back <= 0:
-        return "1d"
-    if back <= 6:
+    """The smallest Yahoo range that still holds `day` and the session before it."""
+    if day > today:
+        raise Err("%s is in the future" % day)
+    n = M.trading_days_between(day, today)
+    if n <= 3:
         return "5d"
     if interval == "1m":
-        raise EntryError("Yahoo keeps 1-minute bars for about a week: use --interval 5m for %s" % day)
-    if back <= 28:
+        raise Err("Yahoo keeps 1-minute bars for about a week: use --interval 5m for %s" % day)
+    if n <= 18:
         return "1mo"
-    if back <= 58:
+    if n <= 57:
         return "60d"
-    raise EntryError("Yahoo keeps 5-minute bars for about 60 days: %s is too far back" % day)
+    raise Err("Yahoo keeps 5-minute bars for about 60 days: %s is too far back" % day)
 
 
-def _open_url(url, timeout=20):
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read().decode("utf-8", "replace")
-
-
-def _sleep(seconds):
-    time.sleep(seconds)
-
-
-def yahoo_get(path):
-    """GET a Yahoo path: query2 first, query1 when query2 answers 429 or 5xx.
-    An HTTP 429 gets one retry on the same host after BACKOFF seconds."""
-    last = "no answer"
-    for host in HOSTS:
-        url = "https://%s.finance.yahoo.com%s" % (host, path)
-        for attempt in (0, 1):
-            try:
-                return _open_url(url)
-            except urllib.error.HTTPError as e:
-                code, body = e.code, None
-                try:
-                    if code == 404:     # Yahoo says why in the body: an unknown ticker
-                        body = e.read().decode("utf-8", "replace")
-                except Exception:
-                    body = None
-                finally:
-                    e.close()
-                if code == 404:
-                    if body:
-                        return body
-                    raise EntryError("Yahoo has no chart at %s (HTTP 404)" % url.split("?")[0])
-                last = "HTTP %d" % code
-                if code == 429 and attempt == 0:
-                    _sleep(BACKOFF)
-                    continue
-                if code == 429 or code >= 500:
-                    break
-                raise EntryError("Yahoo answered HTTP %d for %s" % (code, url.split("?")[0]))
-            except urllib.error.URLError as e:
-                last = "could not connect: %s" % (e.reason,)
-                break
-            except OSError as e:
-                last = "network error: %s" % (e,)
-                break
-    raise EntryError("Yahoo did not answer (%s on query2 and query1): wait a minute and try again" % last)
-
-
-def parse_chart(text, sym):
-    """Yahoo chart JSON v8 -> {symbol, meta, bars, prev_close, data_time}.
-    Bars with a null close are dropped here; off-grid ticks later."""
-    try:
-        data = json.loads(text)
-        res = data["chart"]["result"]
-    except (ValueError, KeyError, TypeError):
-        raise EntryError("Yahoo returned something unexpected for %s" % sym)
-    if not res:
-        err = (data.get("chart") or {}).get("error") or {}
-        raise EntryError("Yahoo has no data for %s: %s" % (sym, err.get("description") or "unknown ticker"))
-    r = res[0] or {}
-    meta = r.get("meta") or {}
-    q = ((r.get("indicators") or {}).get("quote") or [{}])[0] or {}
-
-    def at(key, i):
-        arr = q.get(key) or []
-        return arr[i] if i < len(arr) else None
-
-    bars = []
-    for i, t in enumerate(r.get("timestamp") or []):
-        c = at("close", i)
-        if t is None or c is None:
-            continue
-        o, h, lo = at("open", i), at("high", i), at("low", i)
-        bars.append({"t": int(t), "o": float(c if o is None else o), "h": float(c if h is None else h),
-                     "l": float(c if lo is None else lo), "c": float(c), "v": int(at("volume", i) or 0)})
-    return {"symbol": str(meta.get("symbol") or sym).upper(), "meta": meta, "bars": bars,
-            "prev_close": meta.get("previousClose") or meta.get("chartPreviousClose"),
-            "data_time": meta.get("regularMarketTime")}
-
-
-def read_text(path):
-    if path.endswith(".gz"):
-        with gzip.open(path, "rt", encoding="utf-8") as fh:
-            return fh.read()
-    with open(path, encoding="utf-8") as fh:
-        return fh.read()
-
-
-def offline_file(path, sym):
+def offline_file(path, sym, exchange):
     if os.path.isdir(path):
-        for name in (sym + ".json", sym + ".json.gz", yahoo_symbol(sym) + ".json", yahoo_symbol(sym) + ".json.gz"):
-            p = os.path.join(path, name)
-            if os.path.exists(p):
-                return p
-        raise EntryError("no offline file for %s in %s (want %s.json)" % (sym, path, sym))
+        ys = M.yahoo_symbol(sym, exchange)
+        for name in (sym, ys, sym.replace("&", "_")):
+            for ext in (".json", ".json.gz"):
+                p = os.path.join(path, name + ext)
+                if os.path.exists(p):
+                    return p
+        raise Err("no offline file for %s in %s (want %s.json)" % (sym, path, sym))
     if not os.path.exists(path):
-        raise EntryError("no offline file %s" % path)
+        raise Err("no offline file %s" % path)
     return path
 
 
-def get_chart(sym, interval, day=None, offline=None, today=None):
-    """Bars for one ticker, from Yahoo (range=1d for today) or a saved file."""
-    sym = sym.upper()
+def get_chart(sym, interval, day, today, exchange="NSE", offline=None, net=None):
+    """Bars for one symbol from Yahoo (through market.Net) or a saved file."""
     if offline:
-        f = offline_file(offline, sym)
+        f = offline_file(offline, sym, exchange)
         try:
-            text = read_text(f)
-        except (OSError, ValueError) as e:
-            raise EntryError("could not read %s: %s" % (f, e))
+            text = M.read_text_maybe_gz(f)
+        except OSError as e:
+            raise Err("could not read %s: %s" % (f, e))
+        series = M.parse_chart(text, sym)
     else:
-        today = today or to_eastern(utc_now()).date()
-        text = yahoo_get(chart_path(sym, chart_range(day or today, today, interval), interval))
-    ch = parse_chart(text, sym)
-    if ch["symbol"] != yahoo_symbol(sym):
-        raise EntryError("the chart file holds %s, not %s" % (ch["symbol"], sym))
-    gran = ch["meta"].get("dataGranularity")
+        net = net or NET_FACTORY()
+        series = M.parse_chart(net.chart(sym, chart_range(day, today, interval), interval, exchange), sym)
+    meta = series["meta"]
+    want = M.yahoo_symbol(sym, exchange).upper()
+    got = str(meta.get("symbol") or want).upper()
+    if got != want:
+        raise Err("the chart holds %s, not %s (%s)" % (got, sym, want))
+    gran = meta.get("dataGranularity")
     if gran and gran != interval:
-        raise EntryError("%s has %s bars, not %s: use --interval %s" % (sym, gran, interval, gran))
-    return ch
+        raise Err("%s has %s bars, not %s: use --interval %s" % (sym, gran, interval, gran))
+    bars = M.bars_from_series(series, INTERVALS[interval])
+    dt = meta.get("regularMarketTime")
+    return {"symbol": sym, "exchange": exchange, "yahoo": want, "meta": meta, "bars": bars,
+            "data_time": M.ist_from_ts(dt) if isinstance(dt, (int, float)) else None}
+
+
+def resolve_prev_close(chart, day, override=None):
+    """(previous close, where it came from)."""
+    if override:
+        return float(override), "given"
+    meta = chart.get("meta") or {}
+    dates = sorted({b["dt"].date() for b in chart["bars"]})
+    if dates and dates[-1] == day and meta.get("previousClose"):
+        return float(meta["previousClose"]), "NSE close (Yahoo previousClose)"
+    prev = M.prev_trading_day(day)
+    pb = [b for b in chart["bars"] if b["dt"].date() == prev]
+    if pb:
+        return float(pb[-1]["c"]), ("last trade of %s (approximate: the official close is the volume-weighted "
+                                    "price of the last 30 minutes)" % prev.isoformat())
+    if dates and dates[0] == day and meta.get("chartPreviousClose"):
+        return float(meta["chartPreviousClose"]), "Yahoo chartPreviousClose"
+    return None, None
+
+
+# ---------------------------------------------------------------- config, lists, sides
+
+def refusals(sym, cfg, instrument="EQ", series="EQ"):
+    """(refuse reasons, warnings) from the config lists. Checked before any data is read."""
+    bad, warn = [], []
+    up = lambda xs: [str(x).upper() for x in (xs or [])]  # noqa: E731
+    if sym in up(cfg.get("blocked")):
+        bad.append("%s is on your blocked list (config \"blocked\")" % sym)
+    if sym in up(cfg.get("asm_gsm")):
+        bad.append("%s is under ASM/GSM surveillance (config \"asm_gsm\"): higher margins, trade-for-trade "
+                   "or price limits apply; this pack does not trade it" % sym)
+    if series and str(series).upper() in up(cfg.get("block_series")):
+        bad.append("%s trades in the %s series, trade-for-trade: every trade must be delivered, no intraday "
+                   "(MIS) and no same-day exit" % (sym, str(series).upper()))
+    if sym in up(cfg.get("fno_ban")):
+        if instrument in FNO:
+            bad.append("%s is in the F&O ban period (config \"fno_ban\"): no new F&O positions, only closing "
+                       "ones" % sym)
+        else:
+            warn.append("%s is in the F&O ban period: the cash stock still trades, but expect jumpy prices" % sym)
+    return bad, warn
+
+
+def band_for(sym, cfg, flag=None):
+    if flag is not None:
+        if flag not in M.PRICE_BANDS:
+            raise Err("--band is one of %s (percent)" % ", ".join(map(str, M.PRICE_BANDS)))
+        return float(flag)
+    bands = cfg.get("bands") or {}
+    if isinstance(bands, dict):
+        v = bands.get(sym) or bands.get(sym.upper())
+        if v is not None:
+            try:
+                return float(v)
+            except (TypeError, ValueError):
+                raise Err("config bands[%s] must be a percent, got %r" % (sym, v))
+    return None
+
+
+def check_side(side, product, instrument, cfg, sym):
+    side = {"long": "buy", "short": "sell"}.get(side, side)
+    if side not in ("buy", "sell"):
+        raise Err("--side is buy or sell")
+    if instrument == "CE" and side == "sell":
+        raise Err("a call (CE) gains when %s rises: for a bearish signal plan a put (PE)" % sym)
+    if instrument == "PE" and side == "buy":
+        raise Err("a put (PE) gains when %s falls: for a bullish signal plan a call (CE)" % sym)
+    if side == "sell" and instrument == "EQ":
+        if not cfg.get("allow_short"):
+            raise Err("short selling is off (\"allow_short\": false in trader/config.json). In India a cash "
+                      "short is intraday only (MIS); turn it on only if you mean it")
+        if product != "MIS":
+            raise Err("a cash short must be MIS (intraday): you cannot sell shares you do not hold for "
+                      "delivery (CNC); an uncovered short goes to the exchange auction with a penalty")
+    return side
 
 
 # ---------------------------------------------------------------- the rule
 
-def read_config(path):
-    cfg = dict(DEFAULTS)
-    if path and os.path.exists(path):
-        try:
-            with open(path, encoding="utf-8") as fh:
-                doc = json.load(fh)
-        except ValueError as e:
-            raise EntryError("%s is not valid JSON: %s" % (path, e))
-        for k in DEFAULTS:
-            if doc.get(k):
-                cfg[k] = doc[k]
-    for k in DEFAULTS:
-        parse_hhmm(cfg[k], k)
-    return cfg
-
-
-def r2(x):
-    return None if x is None else round(float(x), 2) + 0.0   # + 0.0 turns -0.0 into 0.0
-
-
-def early_cutoff(day, t, close_dt):
-    """A cutoff on an early-close day moves up with the close: 15:30 (30 minutes
-    before a 16:00 close) becomes 12:30 before a 1:00 p.m. close. A cutoff that
-    is already before the early close stays."""
-    at = datetime.datetime.combine(day, t)
-    if at < close_dt:
-        return at
-    moved = at - (datetime.datetime.combine(day, CLOSE) - close_dt)
-    return moved if moved.time() > OPEN else close_dt
-
-
-def evaluate(chart, now_utc, setup="orb", or_minutes=15, interval="5m", level=None,
-             min_volume_x=None, cfg=None):
-    """Pure function: the setup's status at now_utc from one session's bars."""
-    cfg = cfg or dict(DEFAULTS)
+def _bad_inputs(setup, or_minutes, interval, level):
     if interval not in INTERVALS:
-        raise EntryError("--interval is 5m or 1m")
+        raise Err("--interval is 5m or 1m")
     step = INTERVALS[interval]
-    if or_minutes <= 0 or (or_minutes * 60) % step:
-        raise EntryError("--or-minutes must be a whole number of %s bars" % interval)
-    if setup not in ("orb", "level"):
-        raise EntryError("--setup is orb or level")
+    if or_minutes <= 0 or (or_minutes * 60) % step or or_minutes >= M.SESSION_MINUTES:
+        raise Err("--or-minutes must be a whole number of %s bars" % interval)
+    if setup not in SETUPS:
+        raise Err("--setup is one of %s" % ", ".join(SETUPS))
     if setup == "level" and level is None:
-        raise EntryError("--setup level needs --level PRICE (for example a 20-day high)")
+        raise Err("--setup level needs --level PRICE (for example a 20-day high)")
+    if setup != "level" and level is not None:
+        raise Err("--level is for --setup level")
+
+
+def evaluate(chart, now, setup="orb", or_minutes=15, interval="5m", level=None, min_volume_x=None,
+             side="buy", cfg=None, ctx=None):
+    """Pure function: the setup's status at `now` (naive IST) from the chart's bars."""
+    cfg = dict(M.DEFAULT_CONFIG, **(cfg or {}))
+    ctx = ctx or {}
+    _bad_inputs(setup, or_minutes, interval, level)
+    step = INTERVALS[interval]
     n_or = or_minutes * 60 // step
-    local = to_eastern(now_utc)
-    day = local.date()
-    res = {"symbol": chart["symbol"], "setup": setup, "side": "buy", "date": day.isoformat(),
-           "interval": interval, "or_minutes": or_minutes, "now": local.strftime("%Y-%m-%d %H:%M:%S"), "status": "waiting",
-           "phase": "", "reason": "", "opening_range": None, "level": None, "trigger": None,
-           "last": None, "forming": None, "min_volume_x": min_volume_x,
-           "prev_close": chart.get("prev_close"), "calendar_known": day.year in CALENDAR_YEARS, "_bars": []}
+    long = side == "buy"
+    day = now.date()
+    sym = chart["symbol"]
+    instrument = ctx.get("instrument") or "EQ"
+    is_index = M.is_index(sym)
+    fno = instrument in FNO or is_index
+    res = {"symbol": sym, "exchange": chart.get("exchange", "NSE"), "setup": setup, "side": side,
+           "date": day.isoformat(), "interval": interval, "or_minutes": or_minutes,
+           "now": now.strftime("%Y-%m-%d %H:%M:%S"), "status": "waiting", "phase": "", "reason": "",
+           "opening_range": None, "level": None, "trigger": None, "last": None, "forming": None,
+           "min_volume_x": min_volume_x, "product": ctx.get("product") or "MIS", "instrument": instrument,
+           "index": is_index, "prev_close": None, "prev_close_source": None, "gap_pct": None, "gap_class": None,
+           "gap_and_go": False, "vwap": None, "vwap_side": None, "blocked": False, "expiry_day": False,
+           "circuit": {"band_pct": None, "upper": None, "lower": None, "near": None},
+           "warnings": list(ctx.get("warnings") or []), "calendar_known": M.calendar_known(day.year),
+           "_bars": []}
     dt = chart.get("data_time")
-    res["data_time"] = to_eastern(utc_of(dt)).strftime("%Y-%m-%d %H:%M:%S") if dt else None
-    ok, why = trading_day(day)
-    if not ok:
-        res.update(status="no-data", phase="closed", reason="the NYSE is closed today (%s)" % why,
-                   next_open=next_open(day))
+    res["data_time"] = dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
+    if is_index:
+        res["warnings"].append("%s is an index: you cannot buy it in the cash market. Use this for analysis; "
+                               "for an option trade go to trader-fno, then trader-exit --instrument CE|PE" % sym)
+    if not M.trading_day(day):
+        name = M.holiday_name(day)
+        why = ("NSE holiday: %s" % name) if name else "weekend"
+        res.update(status="no-data", phase="closed", reason="NSE is closed today (%s)" % why,
+                   next_open="%s 09:15" % M.next_trading_day(day).isoformat())
+        sp = M.SPECIAL_SESSIONS.get(day)
+        if sp:
+            res["warnings"].append("%s today: a short evening session (%s). This tool does not time entries in "
+                                   "it: thin, ceremonial trading" % (sp["name"], ("%s-%s" % (sp["start"], sp["end"]))
+                                                                     if sp["start"] else "timing by NSE circular"))
         return res
-    o, c = session(day)
-    open_dt = datetime.datetime.combine(day, o)
-    close_dt = datetime.datetime.combine(day, c)
-    early = c != CLOSE
-    before = datetime.datetime.combine(day, parse_hhmm(cfg["no_entries_before"], "no_entries_before"))
-    cutoff = early_cutoff(day, parse_hhmm(cfg["no_entries_after"], "no_entries_after"), close_dt)
+
+    open_dt = datetime.datetime.combine(day, M.OPEN)
+    close_dt = datetime.datetime.combine(day, M.CLOSE)
+    before = max(open_dt, datetime.datetime.combine(day, M.parse_hhmm(cfg["no_entries_before"], "no_entries_before")))
+    after_t = M.parse_hhmm(cfg["no_entries_after"], "no_entries_after")
+    underlying = (ctx.get("underlying") or sym).upper()
+    if fno and M.is_expiry_day(underlying, day):
+        res["expiry_day"] = True
+        exp_t = M.parse_hhmm(cfg.get("expiry_day_last_entry") or "13:30", "expiry_day_last_entry")
+        if exp_t < after_t:
+            after_t = exp_t
+            res["expiry_cutoff"] = True
+        res["warnings"].append("%s expiry day: F&O entries stop at %s (expiry_day_last_entry); premiums decay "
+                               "fast and gamma makes the last hours jumpy" % (underlying, M.hm(after_t)))
+    elif not fno and M.is_expiry_day("NIFTY", day):
+        res["warnings"].append("NIFTY weekly expiry today: index-heavy stocks can swing late in the day")
+    cutoff = min(close_dt, datetime.datetime.combine(day, after_t))
     or_end = open_dt + datetime.timedelta(minutes=or_minutes)
-    res.update(opens=hm(o), closes=hm(c), early_close=NYSE_EARLY_CLOSE.get(day.isoformat()),
-               no_entries_before=hm(before), no_entries_after=hm(cutoff))
+    res.update(opens=M.hm(M.OPEN), closes=M.hm(M.CLOSE), no_entries_before=M.hm(before.time()),
+               no_entries_after=M.hm(cutoff.time()))
 
     by_slot = {}
     for b in chart["bars"]:
-        if b["t"] % step:
-            continue                       # Yahoo's live tick (10:49:45) is not a bar
-        et = to_eastern(utc_of(b["t"]))
-        if et.date() != day or not (open_dt <= et < close_dt):
+        bdt = b["dt"]
+        if bdt.date() != day or not (open_dt <= bdt < close_dt):
             continue
-        slot = int((et - open_dt).total_seconds()) // step
-        by_slot[slot] = dict(b, et=et, end=et + datetime.timedelta(seconds=step), slot=slot)
+        slot = M.bar_slot(bdt, step // 60)
+        by_slot[slot] = dict(b, slot=slot, end=bdt + datetime.timedelta(seconds=step))
     bars, pending = [], None
-    now_ts = ts_of(now_utc)
     top = max(by_slot) if by_slot else -1
     for slot in sorted(by_slot):
         b = by_slot[slot]
-        end_ts = b["t"] + step
-        if end_ts <= now_ts:
-            # Closed by the clock. On live data it counts once Yahoo has caught up: its last
-            # trade is at or after the close, a later bar exists, or a minute has passed.
-            if dt is None or dt >= end_ts or slot < top or now_ts >= end_ts + SETTLE:
+        if b["end"] <= now:
+            # closed by the clock; on live data it counts once Yahoo has caught up
+            if dt is None or dt >= b["end"] or slot < top or now >= b["end"] + datetime.timedelta(seconds=SETTLE):
                 bars.append(b)
             else:
                 pending = b
-                res["forming"] = {"bar_start": hm(b["et"]), "closes": ampm(b["end"]), "price": r2(b["c"])}
+                res["forming"] = {"bar_start": M.hm(b["dt"]), "closes": short(b["end"]), "price": r2(b["c"])}
                 res["lag_note"] = ("Yahoo's last trade is %s, before the %s bar's close: it counts once Yahoo "
-                                   "catches up (a minute at most)" % (to_eastern(utc_of(dt)).strftime("%H:%M:%S"),
-                                                                       short(b["et"])))
-        elif b["et"] <= local:
-            res["forming"] = {"bar_start": hm(b["et"]), "closes": ampm(b["end"]), "price": r2(b["c"])}
+                                   "catches up (a minute at most)" % (dt.strftime("%H:%M:%S"), M.hm(b["dt"])))
+        elif b["dt"] <= now:
+            res["forming"] = {"bar_start": M.hm(b["dt"]), "closes": short(b["end"]), "price": r2(b["c"])}
     res["_bars"] = bars
     res["bars_closed"] = len(bars)
 
-    if local < open_dt:
-        res.update(phase="pre-open", reason="the NYSE opens at 9:30%s" % (
-            " and the %d-minute range is set at %s" % (or_minutes, short(or_end)) if setup == "orb" else ""))
+    pc, pc_src = resolve_prev_close(chart, day, ctx.get("prev_close"))
+    res["prev_close"], res["prev_close_source"] = r2(pc), pc_src
+    band = ctx.get("band_pct")
+    limits = M.band_limits(pc, band) if (band and pc) else None
+    within = float(cfg.get("avoid_circuit_within_pct") or 2.0)
+    if limits:
+        res["circuit"].update(band_pct=band, upper=limits["upper"], lower=limits["lower"])
+    if now < open_dt:
+        res.update(phase="pre-open", reason="NSE's normal market opens at 9:15 AM (the 9:00-9:15 pre-open "
+                   "auction sets the opening price and makes no bars)%s" % (
+                       "; the %d-minute range is set at %s" % (or_minutes, short(or_end))
+                       if setup != "level" else ""))
         return res
+    if bars and bars[0]["slot"] == 0 and pc:
+        gp = M.gap_pct(bars[0]["o"], pc)
+        res["gap_pct"], res["gap_class"] = r2(gp), M.classify_gap(gp)
+    vols = sum(b["v"] or 0 for b in bars)
+    if bars and vols > 0:
+        res["vwap"] = r2(M.vwap(bars))
+    elif bars:
+        res["warnings"].append("no volume in the data (indexes have none on Yahoo): VWAP and volume checks "
+                               "are not available")
 
     or_bars = [b for b in bars if b["slot"] < n_or]
     avg_vol = (sum(b["v"] for b in or_bars) / float(len(or_bars))) if or_bars else None
     if or_bars:
         res["opening_range"] = {"high": r2(max(b["h"] for b in or_bars)), "low": r2(min(b["l"] for b in or_bars)),
                                 "minutes": or_minutes, "bars": len(or_bars), "of": n_or,
-                                "complete": local >= or_end, "avg_volume": int(round(avg_vol))}
-    if setup == "orb":
-        if local < or_end:
+                                "complete": now >= or_end, "avg_volume": int(round(avg_vol or 0))}
+    if setup == "vwap_reclaim" and bars and vols <= 0:
+        res.update(status="no-data", phase="open", reason="a VWAP reclaim needs volume, and %s has none in "
+                   "the data" % sym)
+        return res
+    if setup != "level":
+        if now < or_end:
             res.update(phase="forming", reason="%d of %d range bars closed; the range is set at %s" % (
-                len(or_bars), n_or, short(or_end)))
+                len(or_bars), n_or, short(or_end.time())))
             return res
         if not or_bars:
             res.update(status="no-data", phase="open", reason="Yahoo sent no bars for the opening range")
             return res
-        lvl = max(b["h"] for b in or_bars)
-    else:
+    orr = res["opening_range"]
+    if setup in ("orb", "gap"):
+        lvl = orr["high"] if long else orr["low"]
+    elif setup == "level":
         lvl = float(level)
+    else:
+        lvl = None
+    if setup == "gap":
+        gp = res["gap_pct"]
+        if gp is None:
+            res.update(status="no-data", phase="open", reason="gap-and-go needs the previous close and the "
+                       "9:15 bar; give --prev-close")
+            return res
+        if (gp < GAP_LARGE) if long else (gp > -GAP_LARGE):
+            res.update(status="expired", phase="open", reason="no gap %s of %g%% or more today (opened %+.2f%% vs "
+                       "the previous close %s): gap-and-go does not apply" % ("up" if long else "down", GAP_LARGE,
+                                                                            gp, M.inr(pc)))
+            return res
+        if (orr["low"] <= pc) if long else (orr["high"] >= pc):
+            res.update(status="expired", phase="open", reason="the gap filled in the first %d minutes (range %s "
+                       "to %s, previous close %s): no gap-and-go" % (or_minutes, M.inr(orr["low"]),
+                                                                    M.inr(orr["high"]), M.inr(pc)))
+            return res
+        res["gap_and_go"] = True
     res["level"] = r2(lvl)
 
-    first_slot = n_or if setup == "orb" else 0
+    first_slot = 0 if setup == "level" else n_or
     trig, thin = None, []
+    pv = vv = 0.0
+    prev_wrong = None
     for b in bars:
+        typical = (b["h"] + b["l"] + b["c"]) / 3.0
+        pv += typical * (b["v"] or 0)
+        vv += b["v"] or 0
+        vw_b = pv / vv if vv else None
+        if setup == "vwap_reclaim":
+            wrong_now = vw_b is not None and ((b["c"] < vw_b) if long else (b["c"] > vw_b))
+            beyond = vw_b is not None and prev_wrong is True and ((b["c"] > vw_b) if long else (b["c"] < vw_b))
+            prev_wrong = wrong_now
+            b["_vw"] = vw_b
+        else:
+            beyond = (b["c"] > lvl) if long else (b["c"] < lvl)
         if b["slot"] < first_slot or b["end"] < before or b["end"] > cutoff:
             continue
-        if b["c"] > lvl:
+        if beyond:
             vx = (b["v"] / avg_vol) if avg_vol else None
             if min_volume_x and (vx is None or vx < min_volume_x):
                 thin.append(b)
                 continue
             trig = b
             break
+    if setup == "vwap_reclaim":
+        res["level"] = r2(trig["_vw"]) if trig else res["vwap"]
+        lvl = res["level"]
     last = bars[-1] if bars else None
-    if last:
-        res["last"] = {"bar_start": hm(last["et"]), "close": r2(last["c"]),
+    if last and lvl:
+        res["last"] = {"bar_start": M.hm(last["dt"]), "close": r2(last["c"]),
                        "vs_level_pct": r2(100.0 * (last["c"] / lvl - 1))}
+    if last and res["vwap"]:
+        res["vwap_side"] = "above" if last["c"] >= res["vwap"] else "below"
 
+    if res["gap_class"] in (("gap-up",) if long else ("gap-down",)) and setup in ("orb", "gap"):
+        res["gap_and_go"] = True
+        res["warnings"].append("gap-and-go: it opened %+.2f%% beyond the previous close %s and is breaking the "
+                               "range. Extra risk: big gaps often fill, so a smaller size and a firm stop"
+                               % (res["gap_pct"], M.inr(pc)))
     if trig:
+        price = trig["c"]
         vx = (trig["v"] / avg_vol) if avg_vol else None
-        res.update(status="triggered", phase="open" if local < close_dt else "after-close",
-                   reason="the %s bar closed above %s" % (short(trig["et"]), "the range high" if setup == "orb" else "the level"))
-        res["trigger"] = {"time": ampm(trig["end"]), "close_time": hm(trig["end"]), "bar_start": hm(trig["et"]),
-                          "bar_index": trig["slot"], "price": r2(trig["c"]), "close": trig["c"],
-                          "volume": trig["v"], "volume_x": r2(vx), "pct_over": r2(100.0 * (trig["c"] / lvl - 1))}
-        res["minutes_since"] = int((local - trig["end"]).total_seconds() // 60)
-        if dt and utc_of(dt) < eastern_to_utc(trig["end"]):
-            res["data_note"] = ("Yahoo's last trade is %s, before this bar closed: its close can still move a cent or two"
-                                % to_eastern(utc_of(dt)).strftime("%H:%M:%S"))
+        vw_at = trig.get("_vw") if setup == "vwap_reclaim" else None
+        if vw_at is None and res["vwap"] is not None:
+            sub = [b for b in bars if b["slot"] <= trig["slot"]]
+            vw_at = M.vwap(sub) if sum(b["v"] or 0 for b in sub) else None
+        res["trigger"] = {"time": short(trig["end"]), "close_time": M.hm(trig["end"]), "bar_start": M.hm(trig["dt"]),
+                          "bar_index": trig["slot"], "price": r2(price), "volume": trig["v"], "volume_x": r2(vx),
+                          "pct_over": r2(100.0 * (price / lvl - 1)) if lvl else None,
+                          "vwap": r2(vw_at), "vwap_side": None if vw_at is None else
+                          ("above" if price >= vw_at else "below")}
+        res["vwap_side"] = res["trigger"]["vwap_side"] or res["vwap_side"]
+        if vw_at is not None and (price < vw_at if long else price > vw_at):
+            res["warnings"].append("price %s is %s VWAP %s: a %s against the session's average price" % (
+                M.inr(price), "below" if long else "above", M.inr(vw_at), "long" if long else "short"))
+        res["minutes_since"] = int((now - trig["end"]).total_seconds() // 60)
+        near = M.near_circuit(price, limits, within)
+        res["circuit"]["near"] = near
+        if (long and near == "upper") or (not long and near == "lower"):
+            edge = limits["upper"] if long else limits["lower"]
+            res.update(status="expired", blocked=True, phase="open" if now < close_dt else "after-close",
+                       reason="the %s bar closed %s at %s, within %g%% of the %s circuit %s (%g%% band): it can "
+                              "lock at the %s circuit; you may not be able to exit. Blocked" % (
+                                  M.hm(trig["dt"]), "above" if long else "below", M.inr(price), within,
+                                  "upper" if long else "lower", M.inr(edge), band,
+                                  "upper" if long else "lower"))
+            return res
+        res.update(status="triggered", phase="open" if now < close_dt else "after-close",
+                   reason="the %s bar closed %s %s" % (M.hm(trig["dt"]), "above" if long else "below", {
+                       "orb": "the range high" if long else "the range low", "gap": "the range high" if long else
+                       "the range low", "level": "the level", "vwap_reclaim": "VWAP"}[setup]))
+        if dt and dt < trig["end"]:
+            res["data_note"] = ("Yahoo's last trade is %s, before this bar closed: its close can still move a "
+                                "tick or two" % dt.strftime("%H:%M:%S"))
         return res
+    if last is not None:
+        near = M.near_circuit(last["c"], limits, within)
+        res["circuit"]["near"] = near
+        if near:
+            res["warnings"].append("last close %s is within %g%% of the %s circuit %s" % (
+                M.inr(last["c"]), within, near, M.inr(limits[near])))
     if not bars:
         res.update(status="no-data", phase="open", reason="Yahoo sent no bars for %s yet" % day.isoformat())
         return res
-    what = "close above the range high $%.2f" % lvl if setup == "orb" else "close above $%.2f" % lvl
-    if local >= cutoff and not (pending and pending["end"] <= cutoff):
-        res.update(status="expired", phase="after-close" if local >= close_dt else "after-cutoff",
+    word = "above" if long else "below"
+    what = {"orb": "close %s the range %s %s" % (word, "high" if long else "low", M.inr(lvl) if lvl else ""),
+            "gap": "close %s the range %s %s" % (word, "high" if long else "low", M.inr(lvl) if lvl else ""),
+            "level": "close %s %s" % (word, M.inr(lvl) if lvl else ""),
+            "vwap_reclaim": "close back %s VWAP" % word}[setup]
+    if now >= cutoff and not (pending and pending["end"] <= cutoff):
+        res.update(status="expired", phase="after-close" if now >= close_dt else "after-cutoff",
                    reason="no %s by %s, the last time for a new entry%s" % (
-                       what, short(cutoff), " (1:00 p.m. early close today)" if early else ""))
+                       what, short(cutoff.time()), " (expiry day)" if res.get("expiry_cutoff") else ""))
         return res
     res["phase"] = "open"
-    if last["c"] > lvl and last in thin:
-        res["reason"] = "the %s bar closed above at $%.2f but on %.2fx the range's volume, under your %.2fx" % (
-            short(last["et"]), last["c"], last["v"] / avg_vol if avg_vol else 0, min_volume_x)
-    elif last["c"] > lvl and last["end"] < before:
-        res["reason"] = "the %s bar closed above at $%.2f, but no entries before %s (config)" % (
-            short(last["et"]), last["c"], short(before))
+    beyond_last = lvl is not None and ((last["c"] > lvl) if long else (last["c"] < lvl))
+    if beyond_last and last in thin:
+        res["reason"] = "the %s bar closed %s at %s but on %.2fx the range's volume, under your %.2fx" % (
+            M.hm(last["dt"]), word, M.inr(last["c"]), last["v"] / avg_vol if avg_vol else 0, min_volume_x)
+    elif beyond_last and last["end"] < before:
+        res["reason"] = "the %s bar closed %s at %s, but no entries before %s (config)" % (
+            M.hm(last["dt"]), word, M.inr(last["c"]), short(before.time()))
+    elif setup == "vwap_reclaim":
+        res["reason"] = "last close %s (%s bar) is %s VWAP %s; waiting for a close back %s it" % (
+            M.inr(last["c"]), M.hm(last["dt"]), res["vwap_side"] or "near", M.inr(res["vwap"]), word)
     else:
         gap = lvl - last["c"]
-        res["reason"] = "last close $%.2f (%s bar), $%.2f %s %s (%+.2f%%)" % (
-            last["c"], short(last["et"]), abs(gap), "under" if gap >= 0 else "over",
-            "the range high $%.2f" % lvl if setup == "orb" else "the level $%.2f" % lvl,
-            100.0 * (last["c"] / lvl - 1))
+        res["reason"] = "last close %s (%s bar), %s %s %s (%+.2f%%)" % (
+            M.inr(last["c"]), M.hm(last["dt"]), M.inr(abs(gap)), "under" if gap >= 0 else "over",
+            "the range %s %s" % ("high" if long else "low", M.inr(lvl)) if setup in ("orb", "gap")
+            else "the level %s" % M.inr(lvl), 100.0 * (last["c"] / lvl - 1))
     return res
 
 
 def public(res):
-    """The result without the internal bar list, ready for JSON."""
     return {k: v for k, v in res.items() if not k.startswith("_")}
 
 
-def entry_doc(res, now_utc):
-    """trader/entry.json, the contract shape (plus a plain-words reason)."""
+def entry_doc(res, now):
+    """trader/entry.json, the contract shape plus the India filters."""
     t = res.get("trigger") or {}
     orr = res.get("opening_range")
-    return {"created_by": "trader-entry", "symbol": res["symbol"], "setup": res["setup"], "side": "buy",
-            "date": res["date"], "status": res["status"], "time": t.get("time"), "bar_start": t.get("bar_start"),
-            "bar_index": t.get("bar_index"), "price": t.get("price"), "level": res.get("level"),
-            "interval": res["interval"],
+    return {"created_by": "trader-entry", "symbol": res["symbol"], "exchange": res["exchange"],
+            "setup": res["setup"], "side": res["side"], "date": res["date"], "status": res["status"],
+            "time": t.get("close_time"), "bar_start": t.get("bar_start"), "bar_index": t.get("bar_index"),
+            "price": t.get("price"), "level": res.get("level"), "interval": res["interval"],
             "opening_range": {"high": orr["high"], "low": orr["low"], "minutes": orr["minutes"]} if orr else None,
-            "source": "yahoo", "checked_at": iso(now_utc), "reason": res.get("reason")}
-
-
-def write_json(path, doc):
-    d = os.path.dirname(path)
-    if d:
-        os.makedirs(d, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(doc, fh, indent=2)
-        fh.write("\n")
+            "vwap": t.get("vwap") if t.get("vwap") is not None else res.get("vwap"),
+            "vwap_side": res.get("vwap_side"), "gap_pct": res.get("gap_pct"), "gap_class": res.get("gap_class"),
+            "gap_and_go": res.get("gap_and_go"), "prev_close": res.get("prev_close"),
+            "product": res.get("product"), "instrument": res.get("instrument"), "index": res.get("index"),
+            "expiry_day": res.get("expiry_day"), "no_entries_after": res.get("no_entries_after"),
+            "circuit": res.get("circuit"), "blocked": res.get("blocked"),
+            "warnings": res.get("warnings") or [], "source": "yahoo", "checked_at": stamp(now),
+            "reason": res.get("reason")}
 
 
 # ---------------------------------------------------------------- words
 
 LABEL = {"triggered": "TRIGGERED", "waiting": "WAITING", "expired": "EXPIRED", "no-data": "NO DATA"}
 PHASE_LABEL = {"pre-open": "NOT OPEN YET", "forming": "RANGE FORMING", "closed": "MARKET CLOSED"}
-SHORT = {"pre-open": "not open", "forming": "forming", "closed": "closed"}
+SHORT_STATUS = {"pre-open": "not open", "forming": "forming", "closed": "closed"}
 
 
 def setup_name(res):
-    if res["setup"] == "orb":
-        return "opening-range breakout (%d-minute range)" % res["or_minutes"]
-    return "close above $%.2f" % res["level"] if res["level"] is not None else "close above a level"
+    side = "long" if res["side"] == "buy" else "short"
+    if res["setup"] in ("orb", "gap"):
+        return "%s (%d-minute range, %s)" % (SETUP_WORDS[res["setup"]], res["or_minutes"], side)
+    if res["setup"] == "level":
+        return "close %s %s (%s)" % ("above" if side == "long" else "below",
+                                     M.inr(res["level"]) if res["level"] is not None else "a level", side)
+    return "VWAP reclaim (%s)" % side
+
+
+def beyond_words(res):
+    long = res["side"] == "buy"
+    if res["setup"] in ("orb", "gap"):
+        return "above the range high" if long else "below the range low"
+    if res["setup"] == "vwap_reclaim":
+        return "back above VWAP" if long else "back below VWAP"
+    return "above the level" if long else "below the level"
 
 
 def describe(res):
-    """Plain lines for a person."""
     when = datetime.datetime.strptime(res["now"], "%Y-%m-%d %H:%M:%S")
     bars = "5-minute" if res["interval"] == "5m" else "1-minute"
-    head = "%s  %s %s ET  %s on %s bars (Yahoo, free, can lag)" % (
-        res["symbol"], when.strftime("%a %Y-%m-%d"), when.strftime("%H:%M"), setup_name(res), bars)
+    head = "%s (%s)  %s %s IST  %s on %s bars (Yahoo: free, unofficial, delayed)" % (
+        res["symbol"], res["exchange"], when.strftime("%a %Y-%m-%d"), when.strftime("%H:%M"), setup_name(res), bars)
     if res.get("data_time") and res["data_time"] <= res["now"] and res["data_time"][:10] == res["date"]:
         head += ", data to %s" % res["data_time"][11:]
     out = [head]
     orr = res.get("opening_range")
     if orr:
-        start = datetime.datetime.strptime(res["opens"], "%H:%M")
+        start = datetime.datetime.combine(datetime.date(2000, 1, 1), M.OPEN)
         end = start + datetime.timedelta(minutes=orr["minutes"])
-        out.append("Opening range %s-%s: high $%.2f, low $%.2f (%d of %d bars%s)." % (
-            short(start), short(end), orr["high"], orr["low"], orr["bars"], orr["of"],
+        out.append("Opening range %s-%s: high %s, low %s (%d of %d bars%s)." % (
+            M.hm(start), M.hm(end), M.inr(orr["high"]), M.inr(orr["low"]), orr["bars"], orr["of"],
             "" if orr["complete"] else ", still forming"))
+    facts = []
+    if res.get("gap_pct") is not None:
+        facts.append("opened %+.2f%% vs the previous close %s (%s)" % (res["gap_pct"], M.inr(res["prev_close"]),
+                                                                        res["gap_class"]))
+    if res.get("vwap") is not None:
+        facts.append("VWAP so far %s%s" % (M.inr(res["vwap"]), ", price %s VWAP" % res["vwap_side"]
+                                           if res.get("vwap_side") else ""))
+    c = res.get("circuit") or {}
+    if c.get("upper"):
+        facts.append("%g%% band: circuits %s / %s" % (c["band_pct"], M.inr(c["lower"]), M.inr(c["upper"])))
+    if facts:
+        out.append("Context: " + "; ".join(facts) + ".")
     label = PHASE_LABEL.get(res["phase"]) or LABEL.get(res["status"], res["status"].upper())
     t = res.get("trigger")
-    if t:
-        out.append("TRIGGERED %s at $%.2f: the %s bar (bar %d) closed above %s $%.2f (%+.2f%%%s)." % (
-            t["time"], t["price"], short(datetime.datetime.strptime(t["bar_start"], "%H:%M")), t["bar_index"],
-            "the range high" if res["setup"] == "orb" else "the level", res["level"], t["pct_over"],
+    if t and res["status"] == "triggered":
+        out.append("TRIGGERED %s at %s: the %s bar (bar %d) closed %s %s (%+.2f%%%s)." % (
+            t["time"], M.inr(t["price"]), t["bar_start"], t["bar_index"], beyond_words(res), M.inr(res["level"]),
+            t.get("pct_over") or 0.0,
             (", %.2fx the range's volume" % t["volume_x"]) if res.get("min_volume_x") and t.get("volume_x") else ""))
         step = INTERVALS[res["interval"]] // 60
         if res.get("minutes_since", 0) > step and res.get("last"):
-            out.append("That was %d minutes ago; the last close is $%.2f (%s bar). A late entry is a different "
-                       "trade: the price, the stop distance and the odds have moved." % (
-                           res["minutes_since"], res["last"]["close"], res["last"]["bar_start"]))
+            out.append("That was %d minutes ago; the last close is %s (%s bar). A late entry is a different trade: "
+                       "the price, the stop distance and the odds have moved." % (
+                           res["minutes_since"], M.inr(res["last"]["close"]), res["last"]["bar_start"]))
         if res.get("data_note"):
             out.append(res["data_note"] + ".")
         if res.get("minutes_since", 0) > step:
             out.append("Nothing was placed.")
         else:
             out.append("This is the moment to get in, if you take the trade. Nothing was placed.")
-        out.append("Next: set the stop and target BEFORE you buy: /trader-exit "
-                   "(exit.py plan --from trader/entry.json).")
     else:
-        out.append("%s  %s." % (label, res["reason"]))
+        out.append("%s  %s." % ("BLOCKED" if res.get("blocked") else label, res["reason"]))
         f = res.get("forming")
         if res.get("lag_note") and res["status"] == "waiting":
             out.append(res["lag_note"] + ".")
         elif f and res["status"] == "waiting" and res["phase"] in ("open", "forming"):
-            out.append("The %s bar is still forming ($%.2f so far, closes %s); it does not count until it closes." % (
-                f["bar_start"].lstrip("0"), f["price"], f["closes"]))
+            out.append("The %s bar is still forming (%s so far, closes %s); it does not count until it closes." % (
+                f["bar_start"], M.inr(f["price"]), f["closes"]))
         if res["status"] == "expired":
             out.append("No entry on this setup today. Nothing was placed.")
         if res.get("next_open"):
-            out.append("Next open: %s New York." % res["next_open"])
-    if res.get("early_close"):
-        out.append("Early close today at 1:00 p.m. (%s): no new entries after %s." % (
-            res["early_close"], res["no_entries_after"]))
+            out.append("Next open: %s IST." % res["next_open"])
+    for w in res.get("warnings") or []:
+        out.append("Note: %s." % w)
+    if res["status"] == "triggered":
+        out.append("Next: set the stop and target BEFORE you %s: /trader-exit (exit.py plan --from "
+                   "trader/entry.json)." % ("buy" if res["side"] == "buy" else "sell"))
     if not res.get("calendar_known"):
-        out.append("Holiday list covers %s only: check nyse.com for this date." % " and ".join(map(str, CALENDAR_YEARS)))
+        out.append("No %s holiday list loaded: check nseindia.com for this date." % res["date"][:4])
     return out
 
 
 def bar_line(b, res):
-    """One watch line for a bar that just closed."""
-    start = short(b["et"])
+    start = M.hm(b["dt"])
     orr = res.get("opening_range") or {}
     lvl = res.get("level")
     t = res.get("trigger")
+    long = res["side"] == "buy"
     n_or = orr.get("of") or 0
-    if res["setup"] == "orb" and b["slot"] < n_or:
+    if res["setup"] != "level" and b["slot"] < n_or:
         seen = [x for x in res["_bars"] if x["slot"] <= b["slot"]]
-        note = "range so far $%.2f to $%.2f" % (min(x["l"] for x in seen), max(x["h"] for x in seen))
-        if b["slot"] == n_or - 1:
-            note = "opening range set: high $%.2f, low $%.2f" % (orr["high"], orr["low"])
+        note = "range so far %s to %s" % (M.inr(min(x["l"] for x in seen)), M.inr(max(x["h"] for x in seen)))
+        if b["slot"] == n_or - 1 and orr:
+            note = "opening range set: high %s, low %s" % (M.inr(orr["high"]), M.inr(orr["low"]))
     elif t and t["bar_index"] == b["slot"]:
-        note = "TRIGGERED: closed above $%.2f (%+.2f%%). Get in now if you take it: %s, $%.2f" % (
-            lvl, t["pct_over"], t["time"], t["price"])
+        note = "%s: closed %s %s. %s" % ("BLOCKED" if res.get("blocked") else "TRIGGERED",
+                                          "above" if long else "below", M.inr(lvl),
+                                          "Near the circuit: no entry" if res.get("blocked") else
+                                          "Get in now if you take it: %s, %s" % (t["time"], M.inr(t["price"])))
     elif lvl is None:
         note = ""
-    elif b["c"] > lvl:
-        note = "above $%.2f" % lvl
-        if res["setup"] == "level" or b["slot"] >= n_or:
-            avg = orr.get("avg_volume")
-            if res.get("min_volume_x") and avg:
-                note += ", but volume %.2fx is under %.2fx" % (b["v"] / float(avg), res["min_volume_x"])
-            elif b["end"] < datetime.datetime.combine(b["et"].date(), parse_hhmm(res["no_entries_before"], "x")):
-                note += ", but no entries before %s" % res["no_entries_before"]
+    elif (b["c"] > lvl) if long else (b["c"] < lvl):
+        note = "%s %s" % ("above" if long else "below", M.inr(lvl))
     else:
-        note = "$%.2f under $%.2f" % (lvl - b["c"], lvl)
-    return "%5s bar  closed $%.2f  %s" % (start, b["c"], note)
+        note = "%s %s %s" % (M.inr(abs(lvl - b["c"])), "under" if long else "over", M.inr(lvl))
+    return "%5s bar  closed %s  %s" % (start, M.inr(b["c"]), note)
 
 
 # ---------------------------------------------------------------- watch
@@ -694,9 +691,7 @@ class SimClock(object):
 
 def watch_loop(provider, clock, sleep, emit, opts, every=30, until=None, max_errors=5, on_trigger=None):
     """Poll bar by bar until a trigger (0), expiry, the close or --until (1).
-    provider(now_utc) -> chart, clock() -> naive UTC, sleep(seconds), emit(line).
-    It sleeps in steps of at most `every` seconds and re-reads the clock each time,
-    so a computer that dozed off catches up as soon as it wakes."""
+    provider(now) -> chart, clock() -> naive IST, sleep(seconds), emit(line)."""
     step = INTERVALS[opts.get("interval", "5m")]
     printed, errors, said_preopen, first = -1, 0, False, True
     next_fetch = None
@@ -705,28 +700,27 @@ def watch_loop(provider, clock, sleep, emit, opts, every=30, until=None, max_err
         if next_fetch is not None and now < next_fetch:
             sleep(max(1, min(every, (next_fetch - now).total_seconds())))
             continue
-        local = to_eastern(now)
-        day = local.date()
-        s = session(day)
-        if not s:
-            emit("%s: market closed today (%s). Nothing to watch." % (day.isoformat(), trading_day(day)[1]))
+        day = now.date()
+        if not M.trading_day(day):
+            name = M.holiday_name(day)
+            emit("%s: NSE is closed today (%s). Nothing to watch." % (day.isoformat(), name or "weekend"))
             return 1, None
-        open_dt = datetime.datetime.combine(day, s[0])
-        close_dt = datetime.datetime.combine(day, s[1])
-        if local < open_dt + datetime.timedelta(seconds=step):
+        open_dt = datetime.datetime.combine(day, M.OPEN)
+        close_dt = datetime.datetime.combine(day, M.CLOSE)
+        if now < open_dt + datetime.timedelta(seconds=step):
             if not said_preopen:
-                emit("%s ET  %s: watching from the first bar's close at %s." % (
-                    local.strftime("%H:%M"), "not open yet" if local < open_dt else "open, no bar closed yet",
-                    short(open_dt + datetime.timedelta(seconds=step))))
+                emit("%s IST  %s: watching from the first bar's close at %s." % (
+                    now.strftime("%H:%M"), "not open yet" if now < open_dt else "open, no bar closed yet",
+                    short((open_dt + datetime.timedelta(seconds=step)).time())))
                 said_preopen = True
-            next_fetch = eastern_to_utc(open_dt) + datetime.timedelta(seconds=step + GRACE)
+            next_fetch = open_dt + datetime.timedelta(seconds=step + GRACE)
             continue
         try:
             chart = provider(now)
             errors = 0
-        except EntryError as e:
+        except Err as e:
             errors += 1
-            emit("%s ET  could not read bars: %s" % (local.strftime("%H:%M:%S"), e))
+            emit("%s IST  could not read bars: %s" % (now.strftime("%H:%M:%S"), e))
             if errors >= max_errors:
                 emit("Stopping after %d failed reads in a row." % errors)
                 return 1, None
@@ -757,61 +751,77 @@ def watch_loop(provider, clock, sleep, emit, opts, every=30, until=None, max_err
             if on_trigger:
                 on_trigger(res, now)
             return 0, res
-        if res["status"] == "expired" or local >= close_dt:
-            emit("EXPIRED  %s." % (res["reason"] or "the market closed without a trigger"))
+        if res["status"] == "expired" or now >= close_dt:
+            emit("%s  %s." % ("BLOCKED" if res.get("blocked") else "EXPIRED",
+                               res["reason"] or "the market closed without a trigger"))
             return 1, res
-        if until and local >= until:
-            emit("Stopped at --until %s without a trigger. %s." % (short(until), res["reason"]))
+        if until and now >= until:
+            emit("Stopped at --until %s without a trigger. %s." % (M.hm(until), res["reason"]))
             return 1, res
-        # sleep until just after the next bar closes; poll every `every` seconds if Yahoo is behind
-        cur_slot = int((local - open_dt).total_seconds()) // step
-        expected_last = cur_slot - 1
-        behind = (not bars) or bars[-1]["slot"] < expected_last
+        cur_slot = int((now - open_dt).total_seconds()) // step
+        behind = (not bars) or bars[-1]["slot"] < cur_slot - 1
         if behind:
             wait = every
         else:
             nxt = open_dt + datetime.timedelta(seconds=(cur_slot + 1) * step + GRACE)
-            wait = (nxt - local).total_seconds()
-        cutoff = datetime.datetime.combine(day, parse_hhmm(res.get("no_entries_after") or "15:30", "cutoff"))
+            wait = (nxt - now).total_seconds()
+        cutoff = datetime.datetime.combine(day, M.parse_hhmm(res.get("no_entries_after") or "15:30", "cutoff"))
         for stop_at in (until, cutoff, close_dt):
-            if stop_at and stop_at > local:
-                wait = min(wait, (stop_at - local).total_seconds())
+            if stop_at and stop_at > now:
+                wait = min(wait, (stop_at - now).total_seconds())
         next_fetch = now + datetime.timedelta(seconds=max(1, wait))
 
 
 # ---------------------------------------------------------------- commands
 
-def _opts(a, cfg):
-    if a.side in ("sell", "short"):
-        raise EntryError("v2 plans longs only: no short entries. Watch for a buy (--side buy) instead.")
-    if a.setup == "orb" and a.level is not None:
-        raise EntryError("--level is for --setup level (an orb's level is its range high)")
+def _context(a, cfg, sym, exchange, series="EQ", warnings=None):
+    instrument = (a.instrument or "EQ").upper()
+    product = (a.product or cfg.get("default_product") or "MIS").upper()
+    bad, warn = refusals(sym, cfg, instrument, series)
+    if bad:
+        raise Err("refused: " + "; ".join(bad))
+    side = check_side(a.side, product, instrument, cfg, sym)
     if a.min_volume_x is not None and a.min_volume_x <= 0:
-        raise EntryError("--min-volume-x must be above 0")
+        raise Err("--min-volume-x must be above 0")
     if a.level is not None and a.level <= 0:
-        raise EntryError("--level must be a price above 0")
-    return {"setup": a.setup, "or_minutes": a.or_minutes, "interval": a.interval, "level": a.level,
-            "min_volume_x": a.min_volume_x, "cfg": cfg}
+        raise Err("--level must be a price above 0")
+    ctx = {"exchange": exchange, "instrument": instrument, "product": product, "underlying": sym,
+           "band_pct": band_for(sym, cfg, a.band), "prev_close": a.prev_close,
+           "warnings": list(warnings or []) + warn}
+    return side, ctx
 
 
-def _load(a, sym, now):
+def _opts(a, cfg, side, ctx, setup=None, level=None):
+    s = setup or a.setup or "orb"
+    lv = a.level if level is None else level
+    _bad_inputs(s, a.or_minutes, a.interval, lv)
+    return {"setup": s, "or_minutes": a.or_minutes, "interval": a.interval, "level": lv,
+            "min_volume_x": a.min_volume_x, "side": side, "cfg": cfg, "ctx": ctx}
+
+
+def _load(a, sym, exchange, now, net=None):
     """(chart, now). An offline file without --now is read as of its own time."""
-    real_today = to_eastern(utc_now()).date()
+    today = M.now_ist().date()
     if a.offline and now is None:
-        ch = get_chart(sym, a.interval, offline=a.offline)
-        return ch, (utc_of(ch["data_time"]) if ch.get("data_time") else utc_now())
-    now = now or utc_now()
-    return get_chart(sym, a.interval, to_eastern(now).date(), a.offline, real_today), now
+        ch = get_chart(sym, a.interval, today, today, exchange, a.offline)
+        if ch.get("data_time"):
+            return ch, ch["data_time"]
+        if ch["bars"]:
+            return ch, ch["bars"][-1]["dt"] + datetime.timedelta(seconds=INTERVALS[a.interval])
+        return ch, M.now_ist()
+    now = now or M.now_ist()
+    return get_chart(sym, a.interval, now.date(), max(today, now.date()), exchange, a.offline, net), now
 
 
 def cmd_check(a):
-    cfg = read_config(a.config)
-    opts = _opts(a, cfg)
-    sym = a.symbol.upper()
-    chart, now = _load(a, sym, parse_now(a.now) if a.now else None)
+    cfg = M.load_config(a.config)
+    sym, exchange = norm_symbol(a.symbol, a.exchange or cfg.get("exchange") or "NSE")
+    side, ctx = _context(a, cfg, sym, exchange, a.series)
+    opts = _opts(a, cfg, side, ctx)
+    chart, now = _load(a, sym, exchange, M.parse_now(a.now) if a.now else None)
     res = evaluate(chart, now, **opts)
     if a.write:
-        write_json(a.write, entry_doc(res, now))
+        M.write_json(a.write, entry_doc(res, now))
     if a.json:
         print(json.dumps(public(res), indent=2))
     else:
@@ -823,108 +833,111 @@ def cmd_check(a):
 
 
 def cmd_watch(a):
-    cfg = read_config(a.config)
-    opts = _opts(a, cfg)
-    sym = a.symbol.upper()
+    cfg = M.load_config(a.config)
+    sym, exchange = norm_symbol(a.symbol, a.exchange or cfg.get("exchange") or "NSE")
+    side, ctx = _context(a, cfg, sym, exchange, a.series)
+    opts = _opts(a, cfg, side, ctx)
     if a.every <= 0:
-        raise EntryError("--every must be above 0 seconds")
-    start = parse_now(a.now) if a.now else None
+        raise Err("--every must be above 0 seconds")
+    start = M.parse_now(a.now) if a.now else None
     if a.offline or start is not None:
         if start is None:
-            start = _load(a, sym, None)[1]
+            start = _load(a, sym, exchange, None)[1]
         clock = SimClock(start)
         now_fn, sleep_fn = clock.now, clock.sleep
     else:
-        now_fn, sleep_fn = utc_now, _sleep
-    real_today = to_eastern(utc_now()).date()
+        now_fn, sleep_fn = M.now_ist, time.sleep
+    net = None if a.offline else NET_FACTORY()
 
     def provider(now):
-        return get_chart(sym, a.interval, to_eastern(now).date(), a.offline, real_today)
+        return get_chart(sym, a.interval, now.date(), max(M.now_ist().date(), now.date()), exchange, a.offline, net)
 
     until = None
     if a.until:
-        t = parse_hhmm(a.until, "--until")
-        until = datetime.datetime.combine(to_eastern(now_fn()).date(), t)
+        until = datetime.datetime.combine(now_fn().date(), M.parse_hhmm(a.until, "--until"))
 
     def on_trigger(res, now):
-        write_json(a.out, entry_doc(res, now))
+        M.write_json(a.out, entry_doc(res, now))
         print("Wrote %s." % a.out, flush=True)
 
     def emit(line):
         print(line, flush=True)
 
-    code, _ = watch_loop(provider, now_fn, sleep_fn, emit, opts, every=a.every, until=until,
-                         on_trigger=on_trigger)
+    code, _ = watch_loop(provider, now_fn, sleep_fn, emit, opts, every=a.every, until=until, on_trigger=on_trigger)
     return code
 
 
 def cmd_watchlist(a):
-    cfg = read_config(a.config)
-    opts = _opts(a, cfg)
-    if not os.path.exists(a.watchlist):
-        raise EntryError("no watchlist at %s: run /trader-scanner first (it writes the hits there)" % a.watchlist)
-    try:
-        with open(a.watchlist, encoding="utf-8") as fh:
-            doc = json.load(fh)
-    except ValueError as e:
-        raise EntryError("%s is not valid JSON: %s" % (a.watchlist, e))
-    hits = [h for h in (doc.get("hits") or []) if isinstance(h, dict) and h.get("symbol")]
+    cfg = M.load_config(a.config)
+    doc = M.read_json(a.watchlist, "watchlist (run /trader-scanner first: it writes the hits there)")
+    hits = [h for h in ((doc or {}).get("hits") or []) if isinstance(h, dict) and h.get("symbol")]
     if not hits:
-        raise EntryError("no hits in %s: the scanner found nothing to watch" % a.watchlist)
+        raise Err("no hits in %s: the scanner found nothing to watch" % a.watchlist)
     if a.offline and not os.path.isdir(a.offline):
-        raise EntryError("watchlist --offline wants a folder of <TICKER>.json files")
-    now = parse_now(a.now) if a.now else None
+        raise Err("watchlist --offline wants a folder of <SYMBOL>.json files")
+    now = M.parse_now(a.now) if a.now else None
+    net = None if a.offline else NET_FACTORY()   # one Net: polite pauses between symbols
     rows = []
-    for i, h in enumerate(hits):
-        sym = str(h["symbol"]).upper()
-        o = dict(opts)
-        if a.setup == "level" and o["level"] is None:
-            o["level"] = h.get("level")
+    for h in hits:
+        raw = str(h["symbol"])
         try:
-            if a.setup == "level" and o["level"] is None:
-                raise EntryError("needs a level: --level PRICE or a \"level\" in the watchlist")
-            if i and not a.offline:
-                _sleep(PAUSE)
-            chart, when = _load(a, sym, now)
+            sym, exchange = norm_symbol(raw, h.get("exchange") or a.exchange or cfg.get("exchange") or "NSE")
+            setup = a.setup or (h.get("setup") if h.get("setup") in SETUPS else ("level" if h.get("level") else "orb"))
+            level = a.level if a.level is not None else (h.get("level") if setup == "level" else None)
+            if setup == "level" and level is None:
+                raise Err("needs a level: --level PRICE or a \"level\" in the watchlist")
+            side, ctx = _context(a, cfg, sym, exchange, h.get("series") or a.series)
+            o = _opts(a, cfg, side, ctx, setup, level)
+            chart, when = _load(a, sym, exchange, now, net)
             rows.append((sym, evaluate(chart, when, **o), None))
-        except EntryError as e:
-            rows.append((sym, None, str(e)))
+        except Err as e:
+            rows.append((raw.upper(), None, str(e)))
     if a.json:
-        print(json.dumps([{"symbol": s, "result": public(r) if r else None, "error": e} for s, r, e in rows], indent=2))
+        print(json.dumps([{"symbol": s, "result": public(r) if r else None, "error": e} for s, r, e in rows],
+                         indent=2))
     else:
-        print("%-6s  %-9s  %-8s  %-8s  %-9s  %-9s  %s" % ("SYMBOL", "STATUS", "TIME", "PRICE", "LEVEL", "LAST", "VS LEVEL"))
+        print("%-11s  %-9s  %-6s  %-13s  %-13s  %-13s  %s" % ("SYMBOL", "STATUS", "TIME", "PRICE", "LEVEL", "LAST",
+                                                            "VS LEVEL"))
         for s, r, e in rows:
             if e:
-                print("%-6s  error: %s" % (s, e))
+                print("%-11s  error: %s" % (s, e))
                 continue
             t = r.get("trigger") or {}
             last = r.get("last") or {}
-            status = SHORT.get(r["phase"], r["status"]) if r["status"] != "triggered" else "triggered"
-            print("%-6s  %-9s  %-8s  %-8s  %-9s  %-9s  %s" % (
-                s, status[:9], t.get("time") or "-", ("$%.2f" % t["price"]) if t else "-",
-                ("$%.2f" % r["level"]) if r.get("level") is not None else "-",
-                ("$%.2f" % last["close"]) if last else "-",
+            status = "blocked" if r.get("blocked") else (
+                SHORT_STATUS.get(r["phase"], r["status"]) if r["status"] != "triggered" else "triggered")
+            print("%-11s  %-9s  %-6s  %-13s  %-13s  %-13s  %s" % (
+                s, status[:9], t.get("close_time") or "-", M.inr(t["price"]) if t else "-",
+                M.inr(r["level"]) if r.get("level") is not None else "-",
+                M.inr(last["close"]) if last else "-",
                 ("%+.2f%%" % last["vs_level_pct"]) if last.get("vs_level_pct") is not None else "-"))
         n = sum(1 for _, r, _ in rows if r and r["status"] == "triggered")
-        print("%d of %d triggered. Pick one, then: entry.py check <TICKER> --write, and /trader-exit." % (n, len(rows)))
-        print("Free Yahoo bars, unofficial and can lag. Nothing was placed.")
+        print("%d of %d triggered. Pick one, then: entry.py check <SYMBOL> --write, and /trader-exit." % (n, len(rows)))
+        print("Yahoo bars: free, unofficial, delayed, can break. Nothing was placed. " + M.NOT_ADVICE)
     return 0 if any(r and r["status"] == "triggered" for _, r, _ in rows) else 1
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Entry Timer (trader-entry): watches a setup bar by bar.")
+    ap = argparse.ArgumentParser(description="Entry Timer (trader-entry, India): watches a setup bar by bar.")
     sub = ap.add_subparsers(dest="cmd")
 
-    def common(p):
-        p.add_argument("--setup", choices=["orb", "level"], default="orb")
-        p.add_argument("--or-minutes", type=int, default=15, help="opening range length (default 15)")
+    def common(p, setup_default="orb"):
+        p.add_argument("--setup", choices=list(SETUPS), default=setup_default)
+        p.add_argument("--or-minutes", type=int, default=15, help="opening range length from 09:15 (default 15)")
         p.add_argument("--interval", choices=["5m", "1m"], default="5m")
-        p.add_argument("--level", type=float, help="the price to close above (--setup level)")
+        p.add_argument("--level", type=float, help="the price to close beyond (--setup level)")
         p.add_argument("--min-volume-x", type=float, help="trigger bar volume vs the range bars' average")
-        p.add_argument("--side", default="buy", choices=["buy", "long", "sell", "short"], help="v2: buy only")
-        p.add_argument("--now", help='pretend it is this New York time, e.g. "2026-10-19 10:15"')
+        p.add_argument("--side", default="buy", choices=["buy", "long", "sell", "short"])
+        p.add_argument("--product", choices=["MIS", "CNC", "NRML"], help="default: config default_product (MIS)")
+        p.add_argument("--instrument", choices=["EQ", "FUT", "CE", "PE"], default="EQ",
+                       help="what you will trade on this signal (F&O: expiry-day cutoff, fno_ban)")
+        p.add_argument("--exchange", choices=["NSE", "BSE"], help="default: config exchange (NSE)")
+        p.add_argument("--series", default="EQ", help="NSE series (EQ, BE, BZ ...): trade-for-trade is refused")
+        p.add_argument("--band", type=int, help="the stock's circuit band in percent (2, 5, 10, 20)")
+        p.add_argument("--prev-close", type=float, help="the previous close, if Yahoo's is missing")
+        p.add_argument("--now", help='pretend it is this IST time, e.g. "2026-10-28 09:50"')
         p.add_argument("--offline", metavar="PATH", help="saved Yahoo chart JSON (.json/.json.gz) or a folder")
-        p.add_argument("--config", default="trader/config.json")
+        p.add_argument("--config", default=M.CONFIG_FILE)
 
     p = sub.add_parser("check", help="the setup's status right now")
     p.add_argument("symbol")
@@ -936,10 +949,10 @@ def main(argv=None):
     p.add_argument("symbol")
     common(p)
     p.add_argument("--every", type=float, default=30, help="seconds between polls while Yahoo is behind")
-    p.add_argument("--until", help="stop at this New York time (HH:MM)")
+    p.add_argument("--until", help="stop at this IST time (HH:MM)")
     p.add_argument("--out", default="trader/entry.json", help="where a trigger is written")
     p = sub.add_parser("watchlist", help="check every hit in trader/watchlist.json")
-    common(p)
+    common(p, setup_default=None)
     p.add_argument("--watchlist", default="trader/watchlist.json")
     p.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
@@ -948,13 +961,13 @@ def main(argv=None):
         return 1
     try:
         return {"check": cmd_check, "watch": cmd_watch, "watchlist": cmd_watchlist}[a.cmd](a)
-    except EntryError as e:
-        print("entry.py: %s" % e, file=sys.stderr)
+    except (Err, ValueError) as e:
+        print("error: %s" % e, file=sys.stderr)
         return 1
     except KeyboardInterrupt:
-        print("entry.py: stopped.", file=sys.stderr)
+        print("error: stopped.", file=sys.stderr)
         return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(M.run_cli(main))

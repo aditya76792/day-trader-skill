@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic test fixture in the OLD results format (three quarter columns). Made-up values. -->
+<xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance" xmlns:in-capmkt="http://www.sebi.gov.in/xbrl/2024-03-31/in-capmkt" xmlns:iso4217="http://www.xbrl.org/2003/iso4217" xmlns:xbrldi="http://xbrl.org/2006/xbrldi" xmlns:link="http://www.xbrl.org/2003/linkbase" xmlns:xlink="http://www.w3.org/1999/xlink">
+<link:schemaRef xlink:type="simple" xlink:href="in-capmkt-ent.xsd"/>
+<xbrli:context id="OneD"><xbrli:entity><xbrli:identifier scheme="http://www.nseindia.com">TCS</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:startDate>2024-10-01</xbrli:startDate><xbrli:endDate>2024-12-31</xbrli:endDate></xbrli:period></xbrli:context>
+<xbrli:context id="TwoD"><xbrli:entity><xbrli:identifier scheme="http://www.nseindia.com">TCS</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:startDate>2024-07-01</xbrli:startDate><xbrli:endDate>2024-09-30</xbrli:endDate></xbrli:period></xbrli:context>
+<xbrli:context id="ThreeD"><xbrli:entity><xbrli:identifier scheme="http://www.nseindia.com">TCS</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:startDate>2023-10-01</xbrli:startDate><xbrli:endDate>2023-12-31</xbrli:endDate></xbrli:period></xbrli:context>
+<xbrli:context id="FourD"><xbrli:entity><xbrli:identifier scheme="http://www.nseindia.com">TCS</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:startDate>2024-04-01</xbrli:startDate><xbrli:endDate>2024-12-31</xbrli:endDate></xbrli:period></xbrli:context>
+<xbrli:context id="OneI"><xbrli:entity><xbrli:identifier scheme="http://www.nseindia.com">TCS</xbrli:identifier></xbrli:entity><xbrli:period><xbrli:instant>2024-12-31</xbrli:instant></xbrli:period></xbrli:context>
+<xbrli:unit id="INR"><xbrli:measure>iso4217:INR</xbrli:measure></xbrli:unit>
+<xbrli:unit id="INRPerShare"><xbrli:divide><xbrli:unitNumerator><xbrli:measure>iso4217:INR</xbrli:measure></xbrli:unitNumerator><xbrli:unitDenominator><xbrli:measure>xbrli:shares</xbrli:measure></xbrli:unitDenominator></xbrli:divide></xbrli:unit>
+<xbrli:unit id="pure"><xbrli:measure>xbrli:pure</xbrli:measure></xbrli:unit>
+<in-capmkt:NatureOfReportStandaloneConsolidated contextRef="OneD">Consolidated</in-capmkt:NatureOfReportStandaloneConsolidated>
+<in-capmkt:LevelOfRoundingUsedInFinancialStatements contextRef="OneI">Crores</in-capmkt:LevelOfRoundingUsedInFinancialStatements>
+<in-capmkt:RevenueFromOperations contextRef="OneD" unitRef="INR" decimals="-7">639730000000</in-capmkt:RevenueFromOperations>
+<in-capmkt:OtherIncome contextRef="OneD" unitRef="INR" decimals="-7">10000000000</in-capmkt:OtherIncome>
+<in-capmkt:Income contextRef="OneD" unitRef="INR" decimals="-7">649730000000</in-capmkt:Income>
+<in-capmkt:EmployeeBenefitExpense contextRef="OneD" unitRef="INR" decimals="-7">364646100000</in-capmkt:EmployeeBenefitExpense>
+<in-capmkt:FinanceCosts contextRef="OneD" unitRef="INR" decimals="-7">2300000000</in-capmkt:FinanceCosts>
+<in-capmkt:DepreciationDepletionAndAmortisationExpense contextRef="OneD" unitRef="INR" decimals="-7">12500000000</in-capmkt:DepreciationDepletionAndAmortisationExpense>
+<in-capmkt:Expenses contextRef="OneD" unitRef="INR" decimals="-7">484730000000</in-capmkt:Expenses>
+<in-capmkt:ExceptionalItemsBeforeTax contextRef="OneD" unitRef="INR" decimals="-7">0</in-capmkt:ExceptionalItemsBeforeTax>
+<in-capmkt:ProfitBeforeTax contextRef="OneD" unitRef="INR" decimals="-7">165000000000</in-capmkt:ProfitBeforeTax>
+<in-capmkt:TaxExpense contextRef="OneD" unitRef="INR" decimals="-7">42000000000</in-capmkt:TaxExpense>
+<in-capmkt:ProfitLossForPeriodFromContinuingOperations contextRef="OneD" unitRef="INR" decimals="-7">123000000000</in-capmkt:ProfitLossForPeriodFromContinuingOperations>
+<in-capmkt:ProfitLossForPeriod contextRef="OneD" unitRef="INR" decimals="-7">123000000000</in-capmkt:ProfitLossForPeriod>
+<in-capmkt:ProfitOrLossAttributableToOwnersOfParent contextRef="OneD" unitRef="INR" decimals="-7">122500000000</in-capmkt:ProfitOrLossAttributableToOwnersOfParent>
+<in-capmkt:BasicEarningsLossPerShareFromContinuingOperations contextRef="OneD" unitRef="INRPerShare" decimals="INF">33.80</in-capmkt:BasicEarningsLossPerShareFromContinuingOperations>
+<in-capmkt:DilutedEarningsLossPerShareFromContinuingOperations contextRef="OneD" unitRef="INRPerShare" decimals="INF">33.80</in-capmkt:DilutedEarningsLossPerShareFromContinuingOperations>
+<in-capmkt:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations contextRef="OneD" unitRef="INRPerShare" decimals="INF">33.80</in-capmkt:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations>
+<in-capmkt:RevenueFromOperations contextRef="TwoD" unitRef="INR" decimals="-7">642590000000</in-capmkt:RevenueFromOperations>
+<in-capmkt:OtherIncome contextRef="TwoD" unitRef="INR" decimals="-7">9500000000</in-capmkt:OtherIncome>
+<in-capmkt:Income contextRef="TwoD" unitRef="INR" decimals="-7">652090000000</in-capmkt:Income>
+<in-capmkt:EmployeeBenefitExpense contextRef="TwoD" unitRef="INR" decimals="-7">366276300000</in-capmkt:EmployeeBenefitExpense>
+<in-capmkt:FinanceCosts contextRef="TwoD" unitRef="INR" decimals="-7">1600000000</in-capmkt:FinanceCosts>
+<in-capmkt:DepreciationDepletionAndAmortisationExpense contextRef="TwoD" unitRef="INR" decimals="-7">12600000000</in-capmkt:DepreciationDepletionAndAmortisationExpense>
+<in-capmkt:Expenses contextRef="TwoD" unitRef="INR" decimals="-7">491090000000</in-capmkt:Expenses>
+<in-capmkt:ExceptionalItemsBeforeTax contextRef="TwoD" unitRef="INR" decimals="-7">0</in-capmkt:ExceptionalItemsBeforeTax>
+<in-capmkt:ProfitBeforeTax contextRef="TwoD" unitRef="INR" decimals="-7">161000000000</in-capmkt:ProfitBeforeTax>
+<in-capmkt:TaxExpense contextRef="TwoD" unitRef="INR" decimals="-7">41500000000</in-capmkt:TaxExpense>
+<in-capmkt:ProfitLossForPeriodFromContinuingOperations contextRef="TwoD" unitRef="INR" decimals="-7">119500000000</in-capmkt:ProfitLossForPeriodFromContinuingOperations>
+<in-capmkt:ProfitLossForPeriod contextRef="TwoD" unitRef="INR" decimals="-7">119500000000</in-capmkt:ProfitLossForPeriod>
+<in-capmkt:ProfitOrLossAttributableToOwnersOfParent contextRef="TwoD" unitRef="INR" decimals="-7">119000000000</in-capmkt:ProfitOrLossAttributableToOwnersOfParent>
+<in-capmkt:BasicEarningsLossPerShareFromContinuingOperations contextRef="TwoD" unitRef="INRPerShare" decimals="INF">32.90</in-capmkt:BasicEarningsLossPerShareFromContinuingOperations>
+<in-capmkt:DilutedEarningsLossPerShareFromContinuingOperations contextRef="TwoD" unitRef="INRPerShare" decimals="INF">32.90</in-capmkt:DilutedEarningsLossPerShareFromContinuingOperations>
+<in-capmkt:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations contextRef="TwoD" unitRef="INRPerShare" decimals="INF">32.90</in-capmkt:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations>
+<in-capmkt:RevenueFromOperations contextRef="ThreeD" unitRef="INR" decimals="-7">605830000000</in-capmkt:RevenueFromOperations>
+<in-capmkt:OtherIncome contextRef="ThreeD" unitRef="INR" decimals="-7">9000000000</in-capmkt:OtherIncome>
+<in-capmkt:Income contextRef="ThreeD" unitRef="INR" decimals="-7">614830000000</in-capmkt:Income>
+<in-capmkt:EmployeeBenefitExpense contextRef="ThreeD" unitRef="INR" decimals="-7">345323100000</in-capmkt:EmployeeBenefitExpense>
+<in-capmkt:FinanceCosts contextRef="ThreeD" unitRef="INR" decimals="-7">2000000000</in-capmkt:FinanceCosts>
+<in-capmkt:DepreciationDepletionAndAmortisationExpense contextRef="ThreeD" unitRef="INR" decimals="-7">12300000000</in-capmkt:DepreciationDepletionAndAmortisationExpense>
+<in-capmkt:Expenses contextRef="ThreeD" unitRef="INR" decimals="-7">464830000000</in-capmkt:Expenses>
+<in-capmkt:ExceptionalItemsBeforeTax contextRef="ThreeD" unitRef="INR" decimals="-7">0</in-capmkt:ExceptionalItemsBeforeTax>
+<in-capmkt:ProfitBeforeTax contextRef="ThreeD" unitRef="INR" decimals="-7">150000000000</in-capmkt:ProfitBeforeTax>
+<in-capmkt:TaxExpense contextRef="ThreeD" unitRef="INR" decimals="-7">39000000000</in-capmkt:TaxExpense>
+<in-capmkt:ProfitLossForPeriodFromContinuingOperations contextRef="ThreeD" unitRef="INR" decimals="-7">111000000000</in-capmkt:ProfitLossForPeriodFromContinuingOperations>
+<in-capmkt:ProfitLossForPeriod contextRef="ThreeD" unitRef="INR" decimals="-7">111000000000</in-capmkt:ProfitLossForPeriod>
+<in-capmkt:ProfitOrLossAttributableToOwnersOfParent contextRef="ThreeD" unitRef="INR" decimals="-7">110500000000</in-capmkt:ProfitOrLossAttributableToOwnersOfParent>
+<in-capmkt:BasicEarningsLossPerShareFromContinuingOperations contextRef="ThreeD" unitRef="INRPerShare" decimals="INF">30.20</in-capmkt:BasicEarningsLossPerShareFromContinuingOperations>
+<in-capmkt:DilutedEarningsLossPerShareFromContinuingOperations contextRef="ThreeD" unitRef="INRPerShare" decimals="INF">30.20</in-capmkt:DilutedEarningsLossPerShareFromContinuingOperations>
+<in-capmkt:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations contextRef="ThreeD" unitRef="INRPerShare" decimals="INF">30.20</in-capmkt:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations>
+</xbrli:xbrl>

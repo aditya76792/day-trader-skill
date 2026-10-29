@@ -1,0 +1,3 @@
+{"created_by": "trader-exit", "symbol": "TCS", "exchange": "NSE", "instrument": {"type": "EQ"},
+ "product": "MIS", "side": "sell", "date": "2026-10-28", "entry": 3050.0,
+ "stop": 3071.5, "stop_label": "opening-range high", "target": 3007.0, "target_label": "2R"}
